@@ -1,0 +1,51 @@
+{
+  "init": [],
+  "name": "Lengow",
+  "version": "6.0.0",
+  "description": "Salesforce Commerce Cloud | Lengow",
+  "main": "index.js",
+  "paths": {
+    "base": "../storefront-reference-architecture/cartridges/app_storefront_base/"
+  },
+  "scripts": {
+    "test": "sgmf-scripts --test test/unit/**/*.js",
+    "test:integration": "sgmf-scripts --integration '../link_lengow/test/integration/**/*.js'",
+    "lint": "sgmf-scripts --lint js && sgmf-scripts --lint css",
+	"cover": "sgmf-scripts --cover test/unit",
+    "compile:js": "sgmf-scripts --compile js",
+    "compile:scss": "sgmf-scripts --compile css",
+    "build": "npm run compile:js && npm run compile:scss",
+    "watch": "sgmf-scripts --watch"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "chai-subset": "^1.5.0",
+    "css-loader": "^0.28.11",
+    "eslint": "^3.2.2",
+    "eslint-config-airbnb-base": "^5.0.1",
+    "eslint-plugin-import": "^1.12.0",
+    "node-sass": "^4.11.0",
+    "postcss-loader": "^2.1.5",
+    "proxyquire": "1.7.4",
+    "request-promise": "^4.2.2",
+    "sass-loader": "^7.1.0",
+    "sgmf-scripts": "^2.4.1",
+    "stylelint": "9.5.0",
+    "stylelint-config-standard": "^18.3.0",
+    "stylelint-scss": "^3.9.2"
+  },
+  "dependencies": {
+    "@babel/core": "^7.12.10",
+    "@babel/preset-env": "^7.12.11",
+    "app-module-path": "^2.2.0",
+    "autoprefixer": "^9.4.4",
+    "babel-loader": "^8.2.2",
+    "bootstrap": "4.3.1",
+    "cheerio": "^1.0.0-rc.10",
+    "cleave.js": "^1.5.3",
+    "jquery": "^3.5.1",
+    "sinon": "^13.0.1"
+  },
+  "license": "ISC",
+  "packageName": "bm_lengow"
+}

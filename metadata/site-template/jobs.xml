@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jobs xmlns="http://www.demandware.com/xml/impex/jobs/2015-07-01">
+    <job job-id="LengowFeed" priority="0">
+        <description/>
+        <parameters/>
+        <flow>
+            <context site-id="UpdateSiteIdHere"/>
+            <step step-id="Lengow Generate Feed SFRA" type="custom.LengowCatalogFeed" enforce-restart="false">
+                <description/>
+                <parameters>
+                    <parameter name="ImpexFolderName">src/lengow</parameter>
+                    <parameter name="FileNamePrefix">lengow</parameter>
+                    <parameter name="IncludeTimeStamp">false</parameter>
+                    <parameter name="SkipMaster">true</parameter>
+                    <parameter name="AvailableOnly">false</parameter>
+                    <parameter name="OnlineOnly">false</parameter>
+                    <parameter name="IsDisabled">false</parameter>
+                </parameters>
+            </step>
+        </flow>
+        <flow>
+            <context site-id="Sites"/>
+            <step step-id="Lengow Upload Feed" type="custom.LengowUploadFeed" enforce-restart="false">
+                <description/>
+                <parameters>
+                    <parameter name="SftpFolderName">UpdateSftpFolderNameHere</parameter>
+                    <parameter name="SftpHost">UpdateSftpHostHere</parameter>
+                    <parameter name="SftpUser">UpdateSftpUserNameHere</parameter>
+                    <parameter name="SftpPass">UpdateSftpPasswordHere</parameter>
+                    <parameter name="SftpPort">UpdateSftpPortHere</parameter>
+                    <parameter name="SftpTimeout">90000</parameter>
+                    <parameter name="ImpexFolderName">src/lengow</parameter>
+                    <parameter name="IsDisabled">false</parameter>
+                </parameters>
+            </step>
+        </flow>
+        <rules/>
+        <triggers>
+            <run-once enabled="false">
+                <date>2022-01-30Z</date>
+                <time>06:29:12.000Z</time>
+            </run-once>
+        </triggers>
+    </job>
+
+</jobs>

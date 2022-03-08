@@ -1,0 +1,90 @@
+.lengow-maincontent-header {
+    font-weight: bold;
+    color: #000;
+    vertical-align: top;
+    white-space: nowrap;
+    line-height: 1.4;
+    padding: 20px 13px 10px;
+    display: flex;
+
+    .selected-locale-dropdown {
+        width: 330px;
+        position: relative;
+        cursor: pointer;
+        display: inline-block;
+        padding: 5px 20px 0 10px;
+        border: 2px solid #111010;
+        height: 40px;
+
+        .selected-locale-label {
+            margin-left: 10px;
+            font-weight: 500;
+            margin-right: 5px;
+        }
+
+        span {
+            margin-top: 9px;
+            float: right;
+            display: inline-block;
+            width: 0;
+            height: 0;
+            border: 6px solid transparent;
+            border-top: 6px solid black;
+        }
+    }
+
+    .locale-selection-items {
+        max-height: 180px;
+        width: 330px;
+        z-index: 1;
+        position: absolute;
+        background: white;
+        overflow: auto;
+        padding: 2px;
+        display: none;
+        margin: 0;
+        border-right: 1px solid rgb(204, 204, 204);
+        border-bottom: 1px solid rgb(204, 204, 204);
+        border-left: 1px solid rgb(204, 204, 204);
+        border-image: initial;
+        border-top: none;
+        box-shadow: rgba(0, 0, 0, 0.2) 0 4px 8px 0, rgba(0, 0, 0, 0.19) 0 6px 20px 0;
+
+        li {
+            list-style: none;
+            padding-left: 5px;
+            font-size: 12px;
+            line-height: 1.7;
+            font-family: inherit;
+
+            [type=checkbox] {
+                margin: 0 0 0.3em;
+            }
+
+            input[type=checkbox] {
+                display: inline-block;
+                width: auto;
+                background-color: initial;
+                cursor: default;
+                appearance: auto;
+                box-sizing: border-box;
+                margin: 3px 3px 3px 4px;
+                padding: initial;
+                border: initial;
+            }
+
+            span {
+                margin-left: 2px;
+                font-weight: normal;
+            }
+        }
+    }
+
+    .reset-input-box {
+        height: 41px;
+    }
+
+    .visible {
+        display: block;
+    }
+}

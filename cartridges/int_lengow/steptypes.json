@@ -1,0 +1,172 @@
+{
+    "step-types": {
+        "script-module-step": [
+            {
+                "@type-id": "custom.LengowCatalogFeed",
+                "@supports-parallel-execution": "false",
+                "@supports-site-context": "true",
+                "@supports-organization-context": "false",
+                "description": "Loads Recent Product Catalog data",
+                "module": "int_lengow/cartridge/scripts/jobs/generateLengowCatalog.js",
+                "function": "generate",
+                "transactional": "false",
+                "status-codes": {
+                    "status":
+                    [
+                        {
+                            "@code": "ERROR",
+                            "description": "Used when the step failed with an error."
+                        },
+                        {
+                            "@code": "FINISHED",
+                            "description": "Used when the step finished successfully."
+                        }
+                    ]
+                },
+                "parameters": {
+                    "parameter": [
+                        {
+                            "@name":"ImpexFolderName",
+                            "@type":"string",
+                            "@required":"true",
+                            "description":"Target folder path (in IMPEX)",
+                            "default-value": "src/lengow"
+                        },
+                        {
+                            "@name":"FileNamePrefix",
+                            "@type":"string",
+                            "@required":"true",
+                            "description":"Filename prefix of the generated files that will contain exported data",
+                            "default-value": "lengow"
+                        },
+                        {
+                            "@name":"IncludeTimeStamp",
+                            "@type":"string",
+                            "@required":"true",
+                            "description":"Include Time Stamp in the file name or not",
+                            "default-value": "false",
+                            "enum-values": {
+                                "value": [
+                                    "true",
+                                    "false"
+                                ]
+                            }
+                        },
+                        {
+                            "@name":"CatalogID",
+                            "@type":"string",
+                            "@required":"false",
+                            "description":"Catalog ID (Optional) - If mentioned, it will export the catalog products only"
+                        },
+                        {
+                            "@name":"SkipMaster",
+                            "description":"Flag to Skip Master Products",
+                            "@type":"boolean",
+                            "@required":"false",
+                            "default-value":"true"
+                        },
+                        {
+                            "@name":"AvailableOnly",
+                            "description":"Flag to Include Available Products Only",
+                            "@type":"boolean",
+                            "@required":"false",
+                            "default-value":"false"
+                        },
+                        {
+                            "@name":"OnlineOnly",
+                            "description":"Flag to Include Online Products Only",
+                            "@type":"boolean",
+                            "@required":"false",
+                            "default-value":"false"
+                        },
+                        {
+                            "@name":"IsDisabled",
+                            "description":"Mark the step as disabled. This will skip the step and returns a OK status",
+                            "@type":"boolean",
+                            "@required":"false",
+                            "default-value":"false"
+                        }
+                    ]
+                }
+            },
+            {
+                "@type-id": "custom.LengowUploadFeed",
+                "@supports-parallel-execution": "false",
+                "@supports-site-context": "true",
+                "@supports-organization-context": "true",
+                "description": "Uploads Recent Product Catalog data to SFTP",
+                "module": "int_lengow/cartridge/scripts/jobs/generateLengowCatalog.js",
+                "function": "upload",
+                "transactional": "false",
+                "status-codes": {
+                    "status":
+                    [
+                        {
+                            "@code": "ERROR",
+                            "description": "Used when the step failed with an error."
+                        },
+                        {
+                            "@code": "FINISHED",
+                            "description": "Used when the step finished successfully."
+                        }
+                    ]
+                },
+                "parameters": {
+                    "parameter": [
+                        {
+                            "@name":"SftpFolderName",
+                            "@type":"string",
+                            "@required":"true",
+                            "description":"Remote folder on Server, relative to home directory"
+                        },
+                        {
+                            "@name":"SftpHost",
+                            "@type":"string",
+                            "@required":"true",
+                            "description":"SFTP Host URL"
+                        },
+                        {
+                            "@name":"SftpUser",
+                            "@type":"string",
+                            "@required":"true",
+                            "description":"SFTP Username"
+                        },
+                        {
+                            "@name":"SftpPass",
+                            "@type":"string",
+                            "@required":"true",
+                            "description":"SFTP Password"
+                        },
+                        {
+                            "@name":"SftpPort",
+                            "@type":"double",
+                            "@required":"true",
+                            "description":"SFTP Port"
+                        },
+                        {
+                            "@name":"SftpTimeout",
+                            "@type":"double",
+                            "@required":"true",
+                            "description":"SFTP Timeout",
+                            "default-value": "90000"
+                        },
+                        {
+                            "@name":"ImpexFolderName",
+                            "@type":"string",
+                            "@required":"true",
+                            "description":"File Path",
+                            "default-value": "src/lengow"
+                        },
+                        {
+                            "@name":"IsDisabled",
+                            "description":"Mark the step as disabled. This will skip the step and returns a OK status",
+                            "@type":"boolean",
+                            "@required":"false",
+                            "default-value":"false"
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}

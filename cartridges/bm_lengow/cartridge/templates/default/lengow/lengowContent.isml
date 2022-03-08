@@ -1,0 +1,40 @@
+<div class="extension-header">
+    <h1 class="page-header">${Resource.msg('forms.lengow.dashboard.label', 'lengow', null)}</h1>
+    <isif condition="${pdict.impexUrl}">
+        <button class="button extension-buttons" onclick=" window.open('${pdict.impexUrl}', '_blank'); return false;" type="button">${Resource.msg('impex.folder.name', 'lengow', null)}</button>
+    </isif>
+    <isif condition="${pdict.jobURL}">
+        <button class="button extension-buttons" onclick=" window.open('${pdict.jobURL}', '_blank'); return false;" type="button">${Resource.msg('jobs.link', 'lengow', null)}</button>
+    </isif>
+</div>
+
+<p class="description">${Resource.msg('forms.lengow.dashboard.desc', 'lengow', null)}</p>
+
+<isif condition="${pdict.success}">
+    <div class="tab mt-4">
+        <button class="tablinks tab-mandatory defaultOpen" data-tab-name="mandatory">${Resource.msg('tab.mandatory.header', 'lengow', null)}</button>
+        <button class="tablinks tab-additional" data-tab-name="additional">${Resource.msg('tab.additional.header', 'lengow', null)}</button>
+    </div>
+
+    <div class="lengow-maincontent-header">
+        <span class="lengow-dropdown">
+            <isinclude template="lengow/tabs/localedropdown" /> 
+        </span>
+        <input type="text" class="searchInput"
+            placeholder="${Resource.msg('forms.search.attributes.placeholder', 'lengow', null)}"
+            title="${Resource.msg('forms.search.attributes.title', 'lengow', null)}" />
+        <button type="submit" name="reset-input-box" class="button reset-input-box">
+            ${Resource.msg('forms.clear', 'lengow', null)}
+        </button>
+    </div>
+
+    <div id="mandatory" class="tabcontent">
+        <isinclude template="lengow/tabs/mandatoryTab" />
+    </div>
+
+    <div id="additional" class="tabcontent">
+        <isinclude template="lengow/tabs/additionalTab" />
+    </div>
+<iselse/>
+    <h2>${pdict.errorMessage}</h2>
+</isif>

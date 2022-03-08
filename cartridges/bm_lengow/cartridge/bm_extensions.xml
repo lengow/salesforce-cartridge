@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<extensions xmlns="http://www.demandware.com/xml/bmmodules/2007-12-11" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.demandware.com/xml/bmmodules/2007-12-11 bmext.xsd">
+    <menuitem id="custom_module_lengow" position="2600" site="true">
+        <name xml:lang="x-default">Lengow</name>
+        <short_description xml:lang="x-default">Manage products of this site to create catalog exports.</short_description>
+        <description xml:lang="x-default">Manage products of this site to create catalog exports.</description>
+        <icon>images/lengow_logo.jpg</icon>
+    </menuitem>
+
+    <menuaction id="custom_module_lengow_submenu" menupath="custom_module_lengow" position="1" site="true">
+        <name xml:lang="x-default">Export Attributes Configurations</name>
+        <short_description xml:lang="x-default">Setting Export Attributes Configurations</short_description>
+        <description xml:lang="x-default">Configuring mandatory and additional attributes for Lengow Export</description>
+        <exec pipeline="LengowController" node="Manage" />
+        <sub-pipelines>
+            <pipeline name="LengowController" />
+        </sub-pipelines>
+        <icon>images/lengow_logo.jpg</icon>
+    </menuaction>
+</extensions>

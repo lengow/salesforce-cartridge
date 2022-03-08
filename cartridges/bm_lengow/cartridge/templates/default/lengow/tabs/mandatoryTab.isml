@@ -1,0 +1,39 @@
+<div class="table-wrapper">
+    <table class="attribute_list_table">
+        <tr class="table-header">
+            <th width="8%" class="text-center">
+                <span><a class="select-all" href="#">${Resource.msg('forms.selectall', 'lengow', null)}</a></span>
+                <span><a class="clear-all d-none" href="#">${Resource.msg('forms.clearall', 'lengow', null)}</a></span>
+            </th>
+            <th width="41%">${Resource.msg('forms.id', 'lengow', null)}</th>
+            <th width="41%">${Resource.msg('forms.name', 'lengow', null)}</th>
+            <th width="10%">${Resource.msg('forms.type', 'lengow', null)}</th>
+        </tr>
+        <isloop items="${pdict.productSystemObjectDefinitions.attributes}" var="attribute">
+            <isset name="mandatory" value="${pdict.lengowMandatoryAttributesArray.indexOf(attribute.id) > -1}"
+                scope="page" />
+            <isset name="additional" value="${pdict.lengowAdditionalAttributesArray.indexOf(attribute.id) > -1}"
+                scope="page" />
+            <tr>
+                <td>
+                    <input type="checkbox" name="SelectedAttributeDefinitionID" data-value="${attribute.id}"
+                        data-mandatory="${mandatory}" data-additional="${additional}" data-system="${attribute.system}"
+                        data-valuetype="${attribute.value_type}" ${attribute.id == 'ID' ? "disabled" : ""} ${mandatory || attribute.id == 'ID' ? "checked='checked'" : ""} />
+                </td>
+                <td class="search-here">${attribute.id}</td>
+                <td class="search-here">${attribute.display_name.default}</td>
+                <td>${attribute.valueTypeName}</td>
+            </tr>
+        </isloop>
+    </table>
+</div>
+<div class="table-bottom-buttons">
+    <button type="submit" name="submit-attributes" class="button submit-attributes"
+        data-link="${URLUtils.https('LengowController-Submit')}" data-type="mandatory">
+        ${Resource.msg('forms.save', 'lengow', null)}
+    </button>
+    <button type="submit" name="reset-attributes" class="button reset-attributes"
+        data-link="${URLUtils.https('LengowController-Submit')}" data-type="mandatory">
+        ${Resource.msg('forms.reset', 'lengow', null)}
+    </button>
+</div>

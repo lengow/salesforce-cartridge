@@ -1,0 +1,23 @@
+<div class="selected-locale-dropdown">
+        ${'SELECT LOCALE'}
+    <i class="selected-locale-label">
+        <isif condition="${pdict.selectedLocales.length > 1}">
+            ${'(' + pdict.selectedLocales.length + ')' + ' Locales Selected'}
+        <iselse/>
+            ${'(' + pdict.selectedLocales.length + ')' + ' Locale Selected'}
+        </isif>
+    </i>
+    <span></span>
+</div>
+
+<ul class="locale-selection-items ${pdict.isAjax ? 'visible' : ''}" data-url="${dw.web.URLUtils.url('LengowController-UpdateLocale')}">
+    <isloop items="${pdict.allowedLocales}" var="locale" status="loopstatus">
+        <isset name="sfccLocale" value="${require('dw/util/Locale').getLocale(locale)}" scope="page" />
+        <isif condition="${locale !== 'default'}">
+            <li class="${pdict.selectedLocales.indexOf(locale) >= 0 ? 'selected' : ''}">
+                <input type="checkbox" data-automation="locale-${locale}" value="${locale}" id="locale-${locale}" ${pdict.selectedLocales.indexOf(locale) >= 0 ? 'checked' : ''}/>
+                <span><label for="locale-${locale}">${sfccLocale.ID} - ${sfccLocale.displayLanguage} (${sfccLocale.displayCountry})</label></span>
+            </li>
+        </isif>
+    </isloop>
+</ul>

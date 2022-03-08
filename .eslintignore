@@ -1,0 +1,6 @@
+cartridges/int_lengow/cartridge/static/
+cartridges/bm_lengow/cartridge/static/
+coverage/
+doc/
+bin/
+codecept.conf.js
