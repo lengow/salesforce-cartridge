@@ -55,7 +55,9 @@ function getDefaultValue(attrObject) {
  */
 function customField(product, attrObject) {
     var attrName = attrObject.id;
-    if (attrName in product) {
+    if (attrName === 'available') {
+        return product.getAvailabilityModel().isInStock();
+    } else if (attrName in product) {
         return getAttributeValue(product[attrName]);
     } else if (attrName in product.custom) {
         return getAttributeValue(product.custom[attrName]);

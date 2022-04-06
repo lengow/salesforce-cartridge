@@ -1,7 +1,7 @@
 # link_lengow
 ## LINK Cartridge Developer Guide ##
 
-* **Description:**  Lengow - As a full-featured feed platform, Lengow helps you clean your product data and intelligently optimize it for hundreds of different marketing channels.
+* **Description:**  Lengow is a central platform at the heart of your e-commerce strategy. Select and import your product data from SFCC to Lengow and optimize it for hundreds of different marketing channels.
 * **Version:** 22.1.0
 * **Compatibility:** <span style="color:red">This version of the Lengow cartridge is compatible with all the three frameworks of SFCC i.e. pipelines version 105.2.0, controllers version 105.2.0 and SFRA version 6.0.0. Cartridge has been tested against code compatibility version 21.7.</span>
 
@@ -41,4 +41,4 @@ You can run `npm run test` to execute all unit tests in the project. Run `npm ru
 `npm run lint` - Execute linting for all JavaScript and SCSS files in the project. You should run this command before committing your code.
 
 ## Contact ##
-Support email - support@lengow.com
+In case of technical issue, customers can raise a ticket by writing to the Lengow technical support team from this URL: https://help.lengow.com/hc/fr/requests/new

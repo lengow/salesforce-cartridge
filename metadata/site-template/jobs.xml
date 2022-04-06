@@ -4,7 +4,7 @@
         <description/>
         <parameters/>
         <flow>
-            <context site-id="UpdateSiteIdHere"/>
+            <context site-id="RefArch"/>
             <step step-id="Lengow Generate Feed SFRA" type="custom.LengowCatalogFeed" enforce-restart="false">
                 <description/>
                 <parameters>
@@ -23,12 +23,8 @@
             <step step-id="Lengow Upload Feed" type="custom.LengowUploadFeed" enforce-restart="false">
                 <description/>
                 <parameters>
+                    <parameter name="ServiceID">lengow.sftp</parameter>
                     <parameter name="SftpFolderName">UpdateSftpFolderNameHere</parameter>
-                    <parameter name="SftpHost">UpdateSftpHostHere</parameter>
-                    <parameter name="SftpUser">UpdateSftpUserNameHere</parameter>
-                    <parameter name="SftpPass">UpdateSftpPasswordHere</parameter>
-                    <parameter name="SftpPort">UpdateSftpPortHere</parameter>
-                    <parameter name="SftpTimeout">90000</parameter>
                     <parameter name="ImpexFolderName">src/lengow</parameter>
                     <parameter name="IsDisabled">false</parameter>
                 </parameters>
