@@ -114,41 +114,17 @@
                 "parameters": {
                     "parameter": [
                         {
+                            "@name":"ServiceID",
+                            "@type":"string",
+                            "@required":"true",
+                            "@trim":"true",
+                            "default-value":"lengow.sftp"
+                        },
+                        {
                             "@name":"SftpFolderName",
                             "@type":"string",
                             "@required":"true",
                             "description":"Remote folder on Server, relative to home directory"
-                        },
-                        {
-                            "@name":"SftpHost",
-                            "@type":"string",
-                            "@required":"true",
-                            "description":"SFTP Host URL"
-                        },
-                        {
-                            "@name":"SftpUser",
-                            "@type":"string",
-                            "@required":"true",
-                            "description":"SFTP Username"
-                        },
-                        {
-                            "@name":"SftpPass",
-                            "@type":"string",
-                            "@required":"true",
-                            "description":"SFTP Password"
-                        },
-                        {
-                            "@name":"SftpPort",
-                            "@type":"double",
-                            "@required":"true",
-                            "description":"SFTP Port"
-                        },
-                        {
-                            "@name":"SftpTimeout",
-                            "@type":"double",
-                            "@required":"true",
-                            "description":"SFTP Timeout",
-                            "default-value": "90000"
                         },
                         {
                             "@name":"ImpexFolderName",

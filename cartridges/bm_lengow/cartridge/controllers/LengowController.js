@@ -7,9 +7,6 @@ var URLUtils = require('dw/web/URLUtils');
 var StringUtils = require('dw/util/StringUtils');
 var Resource = require('dw/web/Resource');
 var Transaction = require('dw/system/Transaction');
-var HashMap = require('dw/util/HashMap');
-var Template = require('dw/util/Template');
-var Response = require('~/cartridge/scripts/util/Response');
 var LocalServiceRegistry = require('dw/svc/LocalServiceRegistry');
 var valueTypeNameMapping = {
     string: 'String',
@@ -100,9 +97,14 @@ function getOCAPIOAuth2Token() {
         return args.text;
     };
 
+    var filterLogMessage = function (message) {
+        return message;
+    };
+
     var serviceCallback = {
         createRequest: createRequest,
-        parseResponse: parseResponse
+        parseResponse: parseResponse,
+        filterLogMessage: filterLogMessage
     };
 
     var service = LocalServiceRegistry.createService('LengowOAuthService', serviceCallback);
@@ -141,9 +143,14 @@ function callSystemObjectDefinitions(serviceName) {
         return args.text;
     };
 
+    var filterLogMessage = function (message) {
+        return message;
+    };
+
     var serviceCallback = {
         createRequest: createRequest,
-        parseResponse: parseResponse
+        parseResponse: parseResponse,
+        filterLogMessage: filterLogMessage
     };
 
     if (authToken && !authToken.error) {
@@ -183,13 +190,15 @@ function getProductSystemObjectDefinitions() {
             var productSystemObjectDefinitions = JSON.parse(response.object).data;
             var output = [];
             productSystemObjectDefinitions.forEach(function (element) {
-                output.push({
-                    id: element.id,
-                    display_name: element.display_name,
-                    system: element.system,
-                    value_type: element.value_type,
-                    valueTypeName: valueTypeNameMapping[element.value_type]
-                });
+                if (element.id !== 'image' && element.id !== 'thumbnail') {
+                    output.push({
+                        id: element.id,
+                        display_name: element.display_name,
+                        system: element.system,
+                        value_type: element.value_type,
+                        valueTypeName: valueTypeNameMapping[element.value_type]
+                    });
+                }
             });
             sysObjResponse = {
                 success: true,

@@ -1,7 +1,7 @@
 'use strict';
 
 var File = require('dw/io/File');
-var SFTPClient = require('dw/net/SFTPClient');
+var LengowSFTPService = require('~/cartridge/scripts/init/lengowSFTPService');
 
 /**
  * Uploads generated catalog(s) found at IMPEX/src/lengow folder
@@ -32,19 +32,15 @@ function uploadCSV() {
             throw new Error('Cannot create IMPEX Archive folder: ' + archiveFolderName + '!');
         }
         var sftpPath = sftpConfig.sftpFolderName;
+        var sftpService = LengowSFTPService.getService(sftpConfig.serviceID);
+
         // upload csv files to Lengow SFTP folder
-        var sftp = new SFTPClient();
-        sftp.setTimeout(sftpConfig.sftpTimeout);
-        if (!sftp.connect(sftpConfig.sftpHost, sftpConfig.sftpPort, sftpConfig.sftpUser, sftpConfig.sftpPass)) {
-            throw new Error('Cannot connect to SFTP host ' + sftpConfig.sftpHost + ', Error:\n' + sftp.getErrorMessage());
-        }
-        if (sftpPath && sftpPath !== '/' && !sftp.cd(sftpPath)) {
+        if (sftpPath && sftpPath !== '/' && !sftpService.call('cd', sftpPath).ok) {
             // try to create SFTP folder if it does not exist, if created do a cd
-            if (sftp.mkdir(sftpPath) && !sftp.cd(sftpPath)) {
-                throw new Error('Cannot cd to SFTP folder ' + sftpPath + ', Error:\n' + sftp.getErrorMessage());
+            if (sftpService.call('mkdir', sftpPath).ok && !sftpService.call('cd', sftpPath).ok) {
+                throw new Error('Cannot cd to SFTP folder ' + sftpPath);
             }
         }
-        logger.info('Successfully connected to SFTP host: {0}, path: {1}', sftpConfig.sftpHost, sftpPath);
 
         // upload csv files to SFTP folder
         var uploadedCsvFiles = [];
@@ -54,18 +50,21 @@ function uploadCSV() {
         while (uploadingCsvFiles.hasNext()) {
             var csvFile = uploadingCsvFiles.next();
             try {
-                sftp.putBinary((uploadToPath + csvFile.name), csvFile);
+                var serviceResult = sftpService.call('putBinary', (uploadToPath + csvFile.name), csvFile);
+                var isUploadSuccessful = serviceResult.getObject();
+                if (!serviceResult.isOk() || !isUploadSuccessful) {
+                    throw new Error('SFTP Service: couldn\'t upload file: ' + csvFile.getFullPath() + ' error: ' + serviceResult.getErrorMessage());
+                }
                 uploadedCsvFiles.push(csvFile);
             } catch (e) {
                 failedCsvFiles.push(csvFile);
             }
         }
-        sftp.disconnect();
 
         if (uploadedCsvFiles.length > 0) {
             logger.info('Successfully Uploaded CSV Files:\n{0}',
                 uploadedCsvFiles.map(function (uploadCsvFile) {
-                    return (uploadCsvFile.fullPath + ' => ' + (sftpConfig.sftpHost + uploadToPath + uploadCsvFile.name));
+                    return (uploadCsvFile.fullPath + ' => ' + (sftpService.getURL() + uploadToPath + uploadCsvFile.name));
                 }).join('\n') // eslint-disable-line no-shadow
             );
         }
@@ -73,7 +72,7 @@ function uploadCSV() {
         if (failedCsvFiles.length > 0) {
             logger.error('Failed Upload CSV Files:\n{0}',
                 failedCsvFiles.map(function (failedCsvFile) {
-                    return (failedCsvFile.fullPath + '=> ' + (sftpConfig.sftpHost + uploadToPath + failedCsvFile.name));
+                    return (failedCsvFile.fullPath + '=> ' + (sftpService.getURL() + uploadToPath + failedCsvFile.name));
                 }).join('\n') // eslint-disable-line no-shadow
             );
         }
