@@ -47,7 +47,11 @@ describe('cartridge/models/lengow/decorators: uploadCSV.js', function () {
     before(function () {
         uploadCSV = proxyquire('int_lengow/cartridge/models/lengow/decorators/uploadCSV', {
             'dw/io/File': File,
-            'dw/net/SFTPClient': SFTPClient
+            '~/cartridge/scripts/init/lengowSFTPService': {
+                getService: function () {
+                    return SFTPClient;
+                }
+            }
         });
     });
 

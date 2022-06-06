@@ -88,11 +88,7 @@ function getJobConfig(jobParams) {
 function getSFTPJobConfig(jobParams) {
     var config = {};
     config.sftpFolderName = jobParams.SftpFolderName;
-    config.sftpHost = jobParams.SftpHost;
-    config.sftpUser = jobParams.SftpUser;
-    config.sftpPass = jobParams.SftpPass;
-    config.sftpPort = jobParams.SftpPort;
-    config.sftpTimeout = jobParams.SftpTimeout;
+    config.serviceID = jobParams.ServiceID;
     return config;
 }
 

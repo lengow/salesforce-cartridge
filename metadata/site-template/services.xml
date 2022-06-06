@@ -12,6 +12,12 @@
         <password/>
     </service-credential>
 
+    <service-credential service-credential-id="lengow.sftp.credentials">
+        <url>UpdateSftpHostHere</url>
+        <user-id>UpdateSftpUserNameHere</user-id>
+        <password>UpdateSftpPasswordHere</password>
+    </service-credential>
+
     <service-profile service-profile-id="LengowProfile">
         <timeout-millis>30000</timeout-millis>
         <rate-limit-enabled>false</rate-limit-enabled>
@@ -22,11 +28,21 @@
         <cb-millis>0</cb-millis>
     </service-profile>
 
+    <service-profile service-profile-id="lengow.sftp.profile">
+        <timeout-millis>1000</timeout-millis>
+        <rate-limit-enabled>false</rate-limit-enabled>
+        <rate-limit-calls>0</rate-limit-calls>
+        <rate-limit-millis>0</rate-limit-millis>
+        <cb-enabled>true</cb-enabled>
+        <cb-calls>10</cb-calls>
+        <cb-millis>1000</cb-millis>
+    </service-profile>
+
     <service service-id="LengowOAuthService">
         <service-type>HTTP</service-type>
         <enabled>true</enabled>
         <log-prefix>LengowServices</log-prefix>
-        <comm-log-enabled>true</comm-log-enabled>
+        <comm-log-enabled>false</comm-log-enabled>
         <force-prd-enabled>false</force-prd-enabled>
         <mock-mode-enabled>false</mock-mode-enabled>
         <profile-id>LengowProfile</profile-id>
@@ -37,11 +53,22 @@
         <service-type>HTTP</service-type>
         <enabled>true</enabled>
         <log-prefix>LengowServices</log-prefix>
-        <comm-log-enabled>true</comm-log-enabled>
+        <comm-log-enabled>false</comm-log-enabled>
         <force-prd-enabled>false</force-prd-enabled>
         <mock-mode-enabled>false</mock-mode-enabled>
         <profile-id>LengowProfile</profile-id>
         <credential-id>LengowGetSystemObjectDefinitionsCredentials</credential-id>
+    </service>
+
+    <service service-id="lengow.sftp">
+        <service-type>SFTP</service-type>
+        <enabled>true</enabled>
+        <log-prefix>LengowSftp</log-prefix>
+        <comm-log-enabled>false</comm-log-enabled>
+        <force-prd-enabled>false</force-prd-enabled>
+        <mock-mode-enabled>false</mock-mode-enabled>
+        <profile-id>lengow.sftp.profile</profile-id>
+        <credential-id>lengow.sftp.credentials</credential-id>
     </service>
 
 </services>
