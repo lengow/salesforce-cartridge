@@ -1,7 +1,7 @@
 {
   "init": [],
   "name": "Lengow",
-  "version": "6.0.0",
+  "version": "22.1.0",
   "description": "Salesforce Commerce Cloud | Lengow",
   "main": "index.js",
   "paths": {
