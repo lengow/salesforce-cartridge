@@ -1,0 +1,90 @@
+.lengow-maincontent-header {
+    font-weight: bold;
+    color: #000;
+    vertical-align: top;
+    white-space: nowrap;
+    line-height: 1.4;
+    padding: 1.25rem 0.813rem 0.625rem;
+    display: flex;
+
+    .selected-locale-dropdown {
+        width: 20.625rem;
+        position: relative;
+        cursor: pointer;
+        display: inline-block;
+        padding: 0.313rem 1.25rem 0 0.625rem;
+        border: 0.125rem solid #111010;
+        height: 2.5rem;
+
+        .selected-locale-label {
+            margin-left: 0.625rem;
+            font-weight: 500;
+            margin-right: 0.313rem;
+        }
+
+        span {
+            margin-top: 0.563rem;
+            float: right;
+            display: inline-block;
+            width: 0;
+            height: 0;
+            border: 0.375rem solid transparent;
+            border-top: 0.375rem solid black;
+        }
+    }
+
+    .locale-selection-items {
+        max-height: 11.25rem;
+        width: 20.625rem;
+        z-index: 1;
+        position: absolute;
+        background: white;
+        overflow: auto;
+        padding: 0.125rem;
+        display: none;
+        margin: 0;
+        border-right: 0.063rem solid rgb(204, 204, 204);
+        border-bottom: 0.063rem solid rgb(204, 204, 204);
+        border-left: 0.063rem solid rgb(204, 204, 204);
+        border-image: initial;
+        border-top: none;
+        box-shadow: rgba(0, 0, 0, 0.2) 0 0.25rem 0.5rem 0, rgba(0, 0, 0, 0.19) 0 0.375rem 1.25rem 0;
+
+        li {
+            list-style: none;
+            padding-left: 0.313rem;
+            font-size: 0.75rem;
+            line-height: 1.7;
+            font-family: inherit;
+
+            [type=checkbox] {
+                margin: 0 0 0.3em;
+            }
+
+            input[type=checkbox] {
+                display: inline-block;
+                width: auto;
+                background-color: initial;
+                cursor: default;
+                appearance: auto;
+                box-sizing: border-box;
+                margin: 0.188rem 0.188rem 0.188rem 0.25rem;
+                padding: initial;
+                border: initial;
+            }
+
+            span {
+                margin-left: 0.125rem;
+                font-weight: normal;
+            }
+        }
+    }
+
+    .reset-input-box {
+        height: 2.563rem;
+    }
+
+    .visible {
+        display: block;
+    }
+}

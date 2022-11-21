@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata xmlns="http://www.demandware.com/xml/impex/metadata/2006-10-31">
+    <type-extension type-id="SitePreferences">
+        <custom-attribute-definitions>
+            <attribute-definition attribute-id="lengowMandatoryAttributes">
+                <display-name xml:lang="x-default">Lengow Mandatory Attributes</display-name>
+                <type>text</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="lengowAdditionalAttributes">
+                <display-name xml:lang="x-default">Lengow Additional Attributes</display-name>
+                <type>text</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="ocapiClientId">
+                <display-name xml:lang="x-default">OCAPI Client ID</display-name>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <min-length>0</min-length>
+            </attribute-definition>
+            <attribute-definition attribute-id="ocapiClientPassword">
+                <display-name xml:lang="x-default">OCAPI Client Password</display-name>
+                <type>password</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="lengowSeletedLocales">
+                <display-name xml:lang="x-default">Selected Locales</display-name>
+                <type>set-of-string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+        </custom-attribute-definitions>
+        <group-definitions>
+            <attribute-group group-id="LengowPreferences">
+                <display-name xml:lang="x-default">Lengow Preferences</display-name>
+                <attribute attribute-id="ocapiClientId"/>
+                <attribute attribute-id="ocapiClientPassword"/>
+                <attribute attribute-id="lengowSeletedLocales"/>
+                <attribute attribute-id="lengowMandatoryAttributes"/>
+                <attribute attribute-id="lengowAdditionalAttributes"/>
+            </attribute-group>
+        </group-definitions>
+    </type-extension>
+</metadata>

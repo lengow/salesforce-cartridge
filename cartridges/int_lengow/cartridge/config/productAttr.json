@@ -1,0 +1,31 @@
+[{
+    "id": "ID",
+    "value_type": "string"
+},{
+    "id": "name",
+    "value_type": "string"
+},{
+    "id": "productType",
+    "value_type": "string"
+},{
+    "id": "category",
+    "value_type": "string"
+},{
+    "id": "inventory_status",
+    "value_type": "string"
+},{
+    "id": "inventory_level",
+    "value_type": "string"
+},{
+    "id": "sale_price",
+    "value_type": "string"
+},{
+    "id": "productURL",
+    "value_type": "string"
+},{
+    "id": "imageURL",
+    "value_type": "string"
+},{
+    "id": "currencyCode",
+    "value_type": "string"
+}]

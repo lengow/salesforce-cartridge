@@ -1,0 +1,4 @@
+<link rel="stylesheet" href="${URLUtils.staticURL('/css/lengow.css')}" />
+<link rel="stylesheet" href="${URLUtils.staticURL('/css/dropdown.css')}" />
+<link rel="stylesheet" href="//code.jquery.com/ui/1.11.1/themes/smoothness/jquery-ui.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">

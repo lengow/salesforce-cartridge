@@ -1,0 +1,8 @@
+<isdecorate template="application/MenuFrame">
+    <isinclude template="lengow/components/header" />
+    <div class="lengow-module" id="dashboard-container">
+        <isinclude template="lengow/lengowContent" />
+    </div>
+    <div class="overlay"></div>
+    <isinclude template="lengow/components/footer" />
+</isdecorate>
