@@ -8,64 +8,126 @@ var emptyStub = sinon.stub();
 var generateCatalog;
 
 describe('cartridge/models/lengow/decorators: generateCatalog.js', function () {
-    before(function () {
-        generateCatalog = proxyquire('int_lengow/cartridge/models/lengow/decorators/generateCatalog', {
-            'dw/system/Site': {
-                getCurrent: function () {
-                    return {
-                        getAllowedLocales: function () {
-                            return {
-                                toArray: function () {
-                                    return ['LengowLocale'];
-                                }
-                            };
-                        },
-                        getCustomPreferenceValue: function () {
-                            return ['LengowLocale'];
-                        }
-                    };
-                }
-            },
-            'dw/catalog/ProductMgr': {
-                queryAllSiteProducts: function () {
-                    return [];
+    describe('Compatibility Mode 21.7 (Collection with toArray)', function () {
+        before(function () {
+            generateCatalog = proxyquire('int_lengow/cartridge/models/lengow/decorators/generateCatalog', {
+                'dw/system/Site': {
+                    getCurrent: function () {
+                        return {
+                            getAllowedLocales: function () {
+                                return {
+                                    toArray: function () {
+                                        return ['LengowLocale'];
+                                    }
+                                };
+                            },
+                            getCustomPreferenceValue: function () {
+                                return ['LengowLocale'];
+                            }
+                        };
+                    }
                 },
-                queryProductsInCatalog: function () {
-                    return [];
+                'dw/catalog/ProductMgr': {
+                    queryAllSiteProducts: function () {
+                        return [];
+                    },
+                    queryProductsInCatalog: function () {
+                        return [];
+                    }
+                },
+                '*/cartridge/scripts/helpers/inventory': {
+                    getInventoryLevel: function () {
+                        return 0;
+                    }
                 }
-            },
-            '*/cartridge/scripts/helpers/inventory': {
-                getInventoryLevel: function () {
-                    return 0;
-                }
-            }
+            });
+        });
+
+        it('should Generate Catalog Feed For Given Locale & Catalog', function () {
+            var object = {
+                config: {
+                    catalogId: 'Lengow-catalog-Id'
+                },
+                logger: {
+                    error: emptyStub,
+                    info: emptyStub
+                },
+                createCSVFile: emptyStub,
+                createFileWriter: function () {
+                    return {
+                        close: emptyStub
+                    };
+                },
+                createCSVStreamWriter: function () {
+                    return {
+                        close: emptyStub
+                    };
+                },
+                setCatalogFeedLocale: emptyStub,
+                writeCSV: emptyStub,
+                setCurrencyCode: emptyStub
+            };
+            generateCatalog(object);
         });
     });
 
-    it('should Generate Catalog Feed For Given Locale & Catalog', function () {
-        var object = {
-            config: {
-                catalogId: 'Lengow-catalog-Id'
-            },
-            logger: {
-                error: emptyStub,
-                info: emptyStub
-            },
-            createCSVFile: emptyStub,
-            createFileWriter: function () {
-                return {
-                    close: emptyStub
-                };
-            },
-            createCSVStreamWriter: function () {
-                return {
-                    close: emptyStub
-                };
-            },
-            setCatalogFeedLocale: emptyStub,
-            writeCSV: emptyStub,
-            setCurrencyCode: emptyStub
-        };
-        generateCatalog(object);
+    describe('Compatibility Mode 22.7+ (Native Set)', function () {
+        before(function () {
+            generateCatalog = proxyquire('int_lengow/cartridge/models/lengow/decorators/generateCatalog', {
+                'dw/system/Site': {
+                    getCurrent: function () {
+                        return {
+                            getAllowedLocales: function () {
+                                // Return a native Set (like in Compatibility Mode 22.7+)
+                                return new Set(['LengowLocale']);
+                            },
+                            getCustomPreferenceValue: function () {
+                                return ['LengowLocale'];
+                            }
+                        };
+                    }
+                },
+                'dw/catalog/ProductMgr': {
+                    queryAllSiteProducts: function () {
+                        return [];
+                    },
+                    queryProductsInCatalog: function () {
+                        return [];
+                    }
+                },
+                '*/cartridge/scripts/helpers/inventory': {
+                    getInventoryLevel: function () {
+                        return 0;
+                    }
+                }
+            });
+        });
+
+        it('should Generate Catalog Feed For Given Locale & Catalog with Set API', function () {
+            var object = {
+                config: {
+                    catalogId: 'Lengow-catalog-Id'
+                },
+                logger: {
+                    error: emptyStub,
+                    info: emptyStub
+                },
+                createCSVFile: emptyStub,
+                createFileWriter: function () {
+                    return {
+                        close: emptyStub
+                    };
+                },
+                createCSVStreamWriter: function () {
+                    return {
+                        close: emptyStub
+                    };
+                },
+                setCatalogFeedLocale: emptyStub,
+                writeCSV: emptyStub,
+                setCurrencyCode: emptyStub
+            };
+            generateCatalog(object);
+        });
     });
 });
