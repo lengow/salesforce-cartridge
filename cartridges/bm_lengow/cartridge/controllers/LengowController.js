@@ -29,38 +29,6 @@ var valueTypeNameMapping = {
 };
 
 /**
- * @description Converts locales from Site API to array format - compatible with both Compatibility Mode 21.7 and 22.7+
- * In 21.7: getAllowedLocales() returns Collection with toArray() method
- * In 22.7+: getAllowedLocales() returns native JavaScript Set
- * @param {(Object|Set)} locales - Collection or Set of locales
- * @returns {Array} Array of locale strings
- */
-function convertLocalesToArray(locales) {
-    // For Compatibility Mode 21.7: Collection with toArray() method
-    if (locales && typeof locales.toArray === 'function') {
-        return locales.toArray();
-    }
-    // For Compatibility Mode 22.7+: Native JavaScript Set
-    // Use forEach for manual conversion (ES5-compatible)
-    if (locales && typeof locales.forEach === 'function') {
-        var result = [];
-        locales.forEach(function (locale) {
-            result.push(locale);
-        });
-        return result;
-    }
-    // Fallback: if already an array or array-like
-    if (locales && locales.length !== undefined) {
-        var arr = [];
-        for (var i = 0; i < locales.length; i++) {
-            arr.push(locales[i]);
-        }
-        return arr;
-    }
-    return [];
-}
-
-/**
  * @description parse json object without throwing error. In case invalid JSON String returns null
  * @param {string} str JSON string
  * @returns {(Object|Null)} Parsed JSON object or null in case of the exception during parsing
@@ -80,6 +48,25 @@ function parseJSON(str) {
         response = null;
     }
     return response;
+}
+
+/**
+ * @description Converts allowed locales to an array, compatible with both Compatibility Mode 21.7 and 22.7+
+ * In 21.7: getAllowedLocales() returns a Collection with toArray() method
+ * In 22.7+: getAllowedLocales() returns a native JavaScript Set
+ * @returns {Array} Array of locale strings
+ */
+function getAllowedLocalesArray() {
+    var allowedLocales = Site.getCurrent().getAllowedLocales();
+    
+    // Check if it's a Set (22.7+) or Collection (21.7)
+    if (allowedLocales instanceof Set || (typeof allowedLocales.size !== 'undefined' && typeof allowedLocales.toArray === 'undefined')) {
+        // Compatibility Mode 22.7+ - it's a native Set
+        return Array.from(allowedLocales);
+    }
+    
+    // Compatibility Mode 21.7 - it's a Collection with toArray() method
+    return allowedLocales.toArray();
 }
 
 /**
@@ -252,7 +239,7 @@ function manage() {
     var productSystemObjectDefinitions = getProductSystemObjectDefinitions();
     var lengowMandatoryAttributesArray = getAttributes('lengowMandatoryAttributes');
     var lengowAdditionalAttributesArray = getAttributes('lengowAdditionalAttributes');
-    var allowedLocales = convertLocalesToArray(Site.getCurrent().getAllowedLocales());
+    var allowedLocales = getAllowedLocalesArray();
     var selectedLocales = currentSite.getCustomPreferenceValue('lengowSeletedLocales');
     // Should Be Valid Locales
     selectedLocales = selectedLocales.filter(function (localeID) {
@@ -293,7 +280,7 @@ function submit() {
     var productSystemObjectDefinitions = getProductSystemObjectDefinitions();
     var lengowMandatoryAttributesArray = getAttributes('lengowMandatoryAttributes');
     var lengowAdditionalAttributesArray = getAttributes('lengowAdditionalAttributes');
-    var allowedLocales = convertLocalesToArray(Site.getCurrent().getAllowedLocales());
+    var allowedLocales = getAllowedLocalesArray();
     var selectedLocales = currentSite.getCustomPreferenceValue('lengowSeletedLocales');
     // Should Be Valid Locales
     selectedLocales = selectedLocales.filter(function (localeID) {
@@ -323,7 +310,7 @@ function updateLocale() {
     var params = request.httpParameterMap; // eslint-disable-line no-undef
     var localeID = params.localeID.value;
     var checked = params.checked.value === 'true';
-    var allowedLocales = convertLocalesToArray(Site.getCurrent().getAllowedLocales());
+    var allowedLocales = getAllowedLocalesArray();
     var selectedLocales = currentSite.getCustomPreferenceValue('lengowSeletedLocales');
 
     selectedLocales = selectedLocales.filter(function (item) {
