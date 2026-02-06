@@ -14,11 +14,9 @@ describe('cartridge/models/lengow/decorators: generateCatalog.js', function () {
                 getCurrent: function () {
                     return {
                         getAllowedLocales: function () {
-                            return {
-                                toArray: function () {
-                                    return ['LengowLocale'];
-                                }
-                            };
+                            // Return an array directly to be compatible with Array.from()
+                            // This works for both 21.7 (Collection.toArray()) and 22.7+ (Set)
+                            return ['LengowLocale'];
                         },
                         getCustomPreferenceValue: function () {
                             return ['LengowLocale'];
