@@ -41,7 +41,7 @@ function convertLocalesToArray(locales) {
         return locales.toArray();
     }
     // For Compatibility Mode 22.7+: Native JavaScript Set
-    // Use spread operator or manual conversion
+    // Use forEach for manual conversion (ES5-compatible)
     if (locales && typeof locales.forEach === 'function') {
         var result = [];
         locales.forEach(function (locale) {
