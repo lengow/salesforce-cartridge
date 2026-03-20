@@ -31,7 +31,7 @@ function initializeTabEvents() {
     });
 
     jQuery('.submit-attributes').on('click', function (e) {
-        $('body').addClass('loading');
+        jQuery('body').addClass('loading');
         e.preventDefault();
         var url = jQuery(this).attr('data-link');
         var type = jQuery(this).attr('data-type');
@@ -39,7 +39,7 @@ function initializeTabEvents() {
         var systemAttrs = [];
         var custonAttrs = [];
 
-        var checkedBoxes = $(
+        var checkedBoxes = jQuery(
             '#' + type + ' input[name="SelectedAttributeDefinitionID"]:checked'
         );
         for (var i = 0; i < checkedBoxes.length; i++) {
@@ -76,14 +76,19 @@ function initializeTabEvents() {
             .done(function (response) {
                 jQuery('#dashboard-container').html(response);
                 initializeTabEvents();
-                $('body').trigger('initialize:dropdown');
+                jQuery('body').trigger('initialize:dropdown');
                 jQuery('.tablinks.tab-' + type).click();
-                $('body').removeClass('loading');
+                jQuery('body').removeClass('loading');
+            })
+            .fail(function () {
+                jQuery('body').removeClass('loading');
+                // eslint-disable-next-line no-alert
+                alert('An error occurred while saving attributes. Please try again.');
             });
     });
 
     jQuery('.reset-attributes').on('click', function (e) {
-        $('body').addClass('loading');
+        jQuery('body').addClass('loading');
         e.preventDefault();
         var url = jQuery(this).attr('data-link');
         var type = jQuery(this).attr('data-type');
@@ -99,9 +104,14 @@ function initializeTabEvents() {
             .done(function (response) {
                 jQuery('#dashboard-container').html(response);
                 initializeTabEvents();
-                $('body').trigger('initialize:dropdown');
+                jQuery('body').trigger('initialize:dropdown');
                 jQuery('.tablinks.tab-' + type).click();
-                $('body').removeClass('loading');
+                jQuery('body').removeClass('loading');
+            })
+            .fail(function () {
+                jQuery('body').removeClass('loading');
+                // eslint-disable-next-line no-alert
+                alert('An error occurred while resetting attributes. Please try again.');
             });
     });
 

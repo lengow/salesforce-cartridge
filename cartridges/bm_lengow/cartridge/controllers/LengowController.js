@@ -51,22 +51,95 @@ function parseJSON(str) {
 }
 
 /**
+ * @description Converts a Collection, Set, Java array or other iterable to a plain Array.
+ * Compatible with Compatibility Mode 21.7 and 22.7+ (GraalJS).
+ * IMPORTANT: In CM 22.7, Java Collection.toArray() returns a Java Object[] which does NOT
+ * have JS Array methods (.filter, .indexOf, .push etc). We must ensure we always return
+ * a proper JavaScript Array.
+ * @param {(Set|Collection|Array|Object)} value The value to convert
+ * @returns {Array} Plain JavaScript Array
+ */
+function toArray(value) {
+    if (!value) {
+        return [];
+    }
+    if (Array.isArray(value)) {
+        return value;
+    }
+    // Try Java Iterator FIRST - works for all Java Collections in both CM 21.7 and 22.7
+    // and always produces a proper JS Array
+    try {
+        if (typeof value.iterator === 'function') {
+            var iter = value.iterator();
+            var items = [];
+            while (iter.hasNext()) {
+                items.push(iter.next());
+            }
+            return items;
+        }
+    } catch (e) {
+        // fallthrough
+    }
+    // Try Collection.toArray() + manual conversion to JS Array
+    // Must come before Array.from() — Array.from({toArray:fn}) returns [] without error,
+    // swallowing the result. In CM 22.7, toArray() returns Java Object[], so we manually
+    // copy into a JS Array to ensure .filter/.indexOf etc. are available.
+    try {
+        if (typeof value.toArray === 'function') {
+            var javaArr = value.toArray();
+            var arr = [];
+            for (var i = 0; i < javaArr.length; i++) {
+                arr.push(javaArr[i]);
+            }
+            return arr;
+        }
+    } catch (e) {
+        // fallthrough
+    }
+    // Try Array.from() - handles native JS Sets (CM 22.7+ getAllowedLocales) and Java arrays
+    try {
+        if (typeof Array.from === 'function') {
+            return Array.from(value);
+        }
+    } catch (e) {
+        // fallthrough
+    }
+    // Try forEach - handles JS Sets and some Java Collections
+    try {
+        if (typeof value.forEach === 'function') {
+            var forEachResult = [];
+            value.forEach(function (item) {
+                forEachResult.push(item);
+            });
+            return forEachResult;
+        }
+    } catch (e) {
+        // fallthrough
+    }
+    // Fallback: manual iteration for array-like objects with .length
+    try {
+        var len = value.length;
+        if (typeof len === 'number') {
+            var result = [];
+            for (var j = 0; j < len; j++) {
+                result.push(value[j]);
+            }
+            return result;
+        }
+    } catch (e) {
+        // fallthrough
+    }
+    return [];
+}
+
+/**
  * @description Converts allowed locales to an array, compatible with both Compatibility Mode 21.7 and 22.7+
  * In 21.7: getAllowedLocales() returns a Collection with toArray() method
  * In 22.7+: getAllowedLocales() returns a native JavaScript Set
  * @returns {Array} Array of locale strings
  */
 function getAllowedLocalesArray() {
-    var allowedLocales = Site.getCurrent().getAllowedLocales();
-    
-    // Check if it's a Set (22.7+) or Collection (21.7)
-    if (allowedLocales instanceof Set || (typeof allowedLocales.size !== 'undefined' && typeof allowedLocales.toArray === 'undefined')) {
-        // Compatibility Mode 22.7+ - it's a native Set
-        return Array.from(allowedLocales);
-    }
-    
-    // Compatibility Mode 21.7 - it's a Collection with toArray() method
-    return allowedLocales.toArray();
+    return toArray(Site.getCurrent().getAllowedLocales());
 }
 
 /**
@@ -90,20 +163,47 @@ function getAttributes(attributeName) {
 }
 
 /**
+ * @description Get a site preference value, trying the standard name first, then falling back to the prefixed name.
+ * This handles the discrepancy between metadata naming conventions (e.g. 'ocapiClientId' vs 'lengowOcapiClientId').
+ * @param {string} name The standard attribute name (without 'lengow' prefix)
+ * @returns {string|null} The preference value
+ */
+function getOcapiPreference(name) {
+    var value;
+    try {
+        value = currentSite.getCustomPreferenceValue(name);
+    } catch (e) {
+        value = null;
+    }
+    if (empty(value)) { // eslint-disable-line no-undef
+        // Fallback: try with 'lengow' prefix (capitalize first letter of name)
+        var prefixedName = 'lengow' + name.charAt(0).toUpperCase() + name.slice(1);
+        try {
+            value = currentSite.getCustomPreferenceValue(prefixedName);
+        } catch (e2) {
+            value = null;
+        }
+    }
+    return value;
+}
+
+/**
  * @description Get the OAuth token for Client Credentials Grant
  * @returns {(Object|string)} Auth Token or object based on service response
  */
 function getOCAPIOAuth2Token() {
     var tokenResponse;
-    if (empty(currentSite.getCustomPreferenceValue('ocapiClientId')) || empty(currentSite.getCustomPreferenceValue('ocapiClientPassword'))) { // eslint-disable-line no-undef
+    var ocapiClientId = getOcapiPreference('ocapiClientId');
+    var ocapiClientPassword = getOcapiPreference('ocapiClientPassword');
+    if (empty(ocapiClientId) || empty(ocapiClientPassword)) { // eslint-disable-line no-undef
         return {
             error: true,
             message: Resource.msg('lengow.ocapi.params.missing', 'lengow', null)
         };
     }
     var createRequest = function (ocapiService, _args) { // eslint-disable-line no-unused-vars
-        var base64Credentials = StringUtils.encodeBase64(currentSite.getCustomPreferenceValue('ocapiClientId') + ':' + currentSite.getCustomPreferenceValue('ocapiClientPassword'));
-        var url = StringUtils.format(ocapiService.URL, [currentSite.getCustomPreferenceValue('ocapiClientId')]);
+        var base64Credentials = StringUtils.encodeBase64(ocapiClientId + ':' + ocapiClientPassword);
+        var url = StringUtils.format(ocapiService.URL, ocapiClientId);
         ocapiService.URL = url;
         ocapiService.addHeader('Content-Type', 'application/x-www-form-urlencoded');
         ocapiService.addHeader('Authorization', 'Basic ' + base64Credentials);
@@ -150,7 +250,7 @@ function callSystemObjectDefinitions(serviceName) {
     var response;
     var createRequest = function (ocapiService, _args) { // eslint-disable-line no-unused-vars
         var host = currentSite.httpsHostName;
-        var url = StringUtils.format(ocapiService.URL, [host, 'Product']);
+        var url = StringUtils.format(ocapiService.URL, host, 'Product');
         ocapiService.URL = url;
         ocapiService.addHeader('Content-Type', 'application/json');
         ocapiService.addHeader('Authorization', 'Bearer ' + authToken);
@@ -186,45 +286,61 @@ function callSystemObjectDefinitions(serviceName) {
 
 /**
  * @description This function get the system object definitions for the Product table with certain useful attributes
+ * Uses the native SFCC SystemObjectMgr API — no OCAPI or OAuth required.
  * @returns {(Object|Null)} returns the attributes of product table in the required format
  */
 function getProductSystemObjectDefinitions() {
     var cache = require('dw/system/CacheMgr').getCache('SystemObjectDefinitions');
     var pSystemObjectDefinitions = cache.get('productSystemObjectDefinitions', function loadProductSystemObjectDefinitions() {
-        var sysObjResponse;
-        var response = callSystemObjectDefinitions('LengowGetSystemObjectDefinitions');
+        var SystemObjectMgr = require('dw/object/SystemObjectMgr');
+        var ObjectAttributeDefinition = require('dw/object/ObjectAttributeDefinition');
 
-        if (response.error) {
-            var message = Resource.msg('api.error.occured', 'lengow', null);
-            if (response.msg) {
-                message = response.msg;
-            } else if (response.message) {
-                message = response.message;
-            }
-            sysObjResponse = {
-                success: false,
-                message: message
-            };
-        } else {
-            var productSystemObjectDefinitions = JSON.parse(response.object).data;
+        var valueTypeCodeMapping = {};
+        valueTypeCodeMapping[ObjectAttributeDefinition.VALUE_TYPE_INT] = 'int';
+        valueTypeCodeMapping[ObjectAttributeDefinition.VALUE_TYPE_NUMBER] = 'double';
+        valueTypeCodeMapping[ObjectAttributeDefinition.VALUE_TYPE_STRING] = 'string';
+        valueTypeCodeMapping[ObjectAttributeDefinition.VALUE_TYPE_TEXT] = 'text';
+        valueTypeCodeMapping[ObjectAttributeDefinition.VALUE_TYPE_HTML] = 'html';
+        valueTypeCodeMapping[ObjectAttributeDefinition.VALUE_TYPE_DATE] = 'date';
+        valueTypeCodeMapping[ObjectAttributeDefinition.VALUE_TYPE_IMAGE] = 'image';
+        valueTypeCodeMapping[ObjectAttributeDefinition.VALUE_TYPE_BOOLEAN] = 'boolean';
+        valueTypeCodeMapping[ObjectAttributeDefinition.VALUE_TYPE_QUANTITY] = 'quantity';
+        valueTypeCodeMapping[ObjectAttributeDefinition.VALUE_TYPE_DATETIME] = 'datetime';
+        valueTypeCodeMapping[ObjectAttributeDefinition.VALUE_TYPE_EMAIL] = 'email';
+        valueTypeCodeMapping[ObjectAttributeDefinition.VALUE_TYPE_PASSWORD] = 'password';
+        valueTypeCodeMapping[ObjectAttributeDefinition.VALUE_TYPE_SET_OF_INT] = 'set_of_int';
+        valueTypeCodeMapping[ObjectAttributeDefinition.VALUE_TYPE_SET_OF_NUMBER] = 'set_of_double';
+        valueTypeCodeMapping[ObjectAttributeDefinition.VALUE_TYPE_SET_OF_STRING] = 'set_of_string';
+        valueTypeCodeMapping[ObjectAttributeDefinition.VALUE_TYPE_ENUM_OF_INT] = 'enum_of_int';
+        valueTypeCodeMapping[ObjectAttributeDefinition.VALUE_TYPE_ENUM_OF_STRING] = 'enum_of_string';
+
+        try {
+            var typeDefinition = SystemObjectMgr.describe('Product');
+            var attributeDefs = toArray(typeDefinition.getAttributeDefinitions());
             var output = [];
-            productSystemObjectDefinitions.forEach(function (element) {
-                if (element.id !== 'image' && element.id !== 'thumbnail') {
+            attributeDefs.forEach(function (attrDef) {
+                var attrId = attrDef.getID();
+                if (attrId !== 'image' && attrId !== 'thumbnail') {
+                    var valueType = valueTypeCodeMapping[attrDef.getValueTypeCode()] || 'string';
                     output.push({
-                        id: element.id,
-                        display_name: element.display_name,
-                        system: element.system,
-                        value_type: element.value_type,
-                        valueTypeName: valueTypeNameMapping[element.value_type]
+                        id: attrId,
+                        display_name: attrDef.getDisplayName(),
+                        system: attrDef.isSystem(),
+                        value_type: valueType,
+                        valueTypeName: valueTypeNameMapping[valueType] || valueType
                     });
                 }
             });
-            sysObjResponse = {
+            return {
                 success: true,
                 attributes: output
             };
+        } catch (e) {
+            return {
+                success: false,
+                message: e.message || e.toString()
+            };
         }
-        return sysObjResponse;
     });
     if (!pSystemObjectDefinitions.success) {
         cache.invalidate('productSystemObjectDefinitions');
@@ -236,30 +352,44 @@ function getProductSystemObjectDefinitions() {
  * @description This Endpoint renders the main dasboard page where the merchant can choose mandatory and additional attributes
  */
 function manage() {
-    var productSystemObjectDefinitions = getProductSystemObjectDefinitions();
-    var lengowMandatoryAttributesArray = getAttributes('lengowMandatoryAttributes');
-    var lengowAdditionalAttributesArray = getAttributes('lengowAdditionalAttributes');
-    var allowedLocales = getAllowedLocalesArray();
-    var selectedLocales = currentSite.getCustomPreferenceValue('lengowSeletedLocales');
-    // Should Be Valid Locales
-    selectedLocales = selectedLocales.filter(function (localeID) {
-        return allowedLocales.indexOf(localeID) >= 0;
-    });
+    try {
+        var productSystemObjectDefinitions = getProductSystemObjectDefinitions();
+        var lengowMandatoryAttributesArray = getAttributes('lengowMandatoryAttributes');
+        var lengowAdditionalAttributesArray = getAttributes('lengowAdditionalAttributes');
+        var allowedLocales = getAllowedLocalesArray();
+        var selectedLocales = toArray(currentSite.getCustomPreferenceValue('lengowSeletedLocales'));
+        // Should Be Valid Locales
+        selectedLocales = selectedLocales.filter(function (localeID) {
+            return allowedLocales.indexOf(localeID) >= 0;
+        });
 
-    var impexUrl = StringUtils.format('https://{0}/on/demandware.servlet/webdav/Sites/Impex', [currentSite.httpsHostName]);
-    var jobURL = URLUtils.url('ViewApplication-BM', 'SelectedMenuItem', 'operations', 'CurrentMenuItemId', 'operations', 'screen', 'job', 'menuactionid', 'jobschedules').toString();
+        var impexUrl = StringUtils.format('https://{0}/on/demandware.servlet/webdav/Sites/Impex', currentSite.httpsHostName);
+        var jobURL = URLUtils.url('ViewApplication-BM', 'SelectedMenuItem', 'operations', 'CurrentMenuItemId', 'operations', 'screen', 'job', 'menuactionid', 'jobschedules').toString();
 
-    ISML.renderTemplate('lengow/lengowMainDashboard', {
-        success: productSystemObjectDefinitions.success,
-        errorMessage: productSystemObjectDefinitions.success ? '' : productSystemObjectDefinitions.message,
-        productSystemObjectDefinitions: productSystemObjectDefinitions,
-        lengowMandatoryAttributesArray: lengowMandatoryAttributesArray,
-        lengowAdditionalAttributesArray: lengowAdditionalAttributesArray,
-        allowedLocales: allowedLocales,
-        selectedLocales: selectedLocales,
-        impexUrl: impexUrl,
-        jobURL: jobURL
-    });
+        ISML.renderTemplate('lengow/lengowMainDashboard', {
+            success: productSystemObjectDefinitions.success,
+            errorMessage: productSystemObjectDefinitions.success ? '' : productSystemObjectDefinitions.message,
+            productSystemObjectDefinitions: productSystemObjectDefinitions,
+            lengowMandatoryAttributesArray: lengowMandatoryAttributesArray,
+            lengowAdditionalAttributesArray: lengowAdditionalAttributesArray,
+            allowedLocales: allowedLocales,
+            selectedLocales: selectedLocales,
+            impexUrl: impexUrl,
+            jobURL: jobURL
+        });
+    } catch (e) {
+        ISML.renderTemplate('lengow/lengowMainDashboard', {
+            success: false,
+            errorMessage: Resource.msg('api.error.occured', 'lengow', null) + ' (' + (e.message || e.toString()) + ')',
+            productSystemObjectDefinitions: { success: false, attributes: [] },
+            lengowMandatoryAttributesArray: [],
+            lengowAdditionalAttributesArray: [],
+            allowedLocales: [],
+            selectedLocales: [],
+            impexUrl: '',
+            jobURL: ''
+        });
+    }
 }
 
 /**
@@ -281,13 +411,13 @@ function submit() {
     var lengowMandatoryAttributesArray = getAttributes('lengowMandatoryAttributes');
     var lengowAdditionalAttributesArray = getAttributes('lengowAdditionalAttributes');
     var allowedLocales = getAllowedLocalesArray();
-    var selectedLocales = currentSite.getCustomPreferenceValue('lengowSeletedLocales');
+    var selectedLocales = toArray(currentSite.getCustomPreferenceValue('lengowSeletedLocales'));
     // Should Be Valid Locales
     selectedLocales = selectedLocales.filter(function (localeID) {
         return allowedLocales.indexOf(localeID) >= 0;
     });
 
-    var impexUrl = StringUtils.format('https://{0}/on/demandware.servlet/webdav/Sites/Impex', [currentSite.httpsHostName]);
+    var impexUrl = StringUtils.format('https://{0}/on/demandware.servlet/webdav/Sites/Impex', currentSite.httpsHostName);
     var jobURL = URLUtils.url('ViewApplication-BM', 'SelectedMenuItem', 'operations', 'CurrentMenuItemId', 'operations', 'screen', 'job', 'menuactionid', 'jobschedules').toString();
 
     ISML.renderTemplate('lengow/lengowContent', {
@@ -311,7 +441,7 @@ function updateLocale() {
     var localeID = params.localeID.value;
     var checked = params.checked.value === 'true';
     var allowedLocales = getAllowedLocalesArray();
-    var selectedLocales = currentSite.getCustomPreferenceValue('lengowSeletedLocales');
+    var selectedLocales = toArray(currentSite.getCustomPreferenceValue('lengowSeletedLocales'));
 
     selectedLocales = selectedLocales.filter(function (item) {
         return allowedLocales.indexOf(item) >= 0;

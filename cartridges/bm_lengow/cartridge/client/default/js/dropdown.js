@@ -4,13 +4,13 @@
  * Initializing Lengow Drop Down Events
  */
 function initializeDropDownEvents() {
-    $('.selected-locale-dropdown, .locale-selection-items').hover(function () {
-        var localeSelection = $('.locale-selection-items');
+    jQuery('.selected-locale-dropdown, .locale-selection-items').hover(function () {
+        var localeSelection = jQuery('.locale-selection-items');
         if (!localeSelection.hasClass('visible')) {
             localeSelection.addClass('visible');
         }
     }, function () {
-        var localeSelection = $('.locale-selection-items');
+        var localeSelection = jQuery('.locale-selection-items');
         if (localeSelection.hasClass('visible')) {
             localeSelection.removeClass('visible');
         }
@@ -34,7 +34,7 @@ function initializeDropDownEvents() {
         })
         .done(function (response) {
             jQuery('.lengow-dropdown').html(response);
-            $('body').trigger('initialize:dropdown');
+            jQuery('body').trigger('initialize:dropdown');
         });
     });
 }
@@ -43,7 +43,7 @@ function initializeDropDownEvents() {
  * Bind reinitialize event on body
  */
 function reInitializeDropDownEvents() {
-    $('body').on('initialize:dropdown', function () {
+    jQuery('body').on('initialize:dropdown', function () {
         initializeDropDownEvents();
     });
 }
