@@ -324,7 +324,7 @@ function getProductSystemObjectDefinitions() {
                     var valueType = valueTypeCodeMapping[attrDef.getValueTypeCode()] || 'string';
                     output.push({
                         id: attrId,
-                        display_name: attrDef.getDisplayName(),
+                        display_name: { default: attrDef.getDisplayName() },
                         system: attrDef.isSystem(),
                         value_type: valueType,
                         valueTypeName: valueTypeNameMapping[valueType] || valueType
