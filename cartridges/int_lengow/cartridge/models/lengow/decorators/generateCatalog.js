@@ -4,10 +4,10 @@ var Site = require('dw/system/Site');
 
 /**
  * @description Converts a Collection, Set, Java array or other iterable to a plain Array.
- * Compatible with Compatibility Mode 21.7 (Collection with toArray()), 22.7+ (native Set or Java arrays).
- * In CM 22.7, some APIs like getAllowedLocales() return Java String arrays ([Ljava.lang.String;).
- * Accessing non-existent properties on Java objects in GraalJS throws errors instead of returning undefined,
- * so all property accesses are wrapped in try-catch.
+ * Compatible with Compatibility Mode 21.7 and 22.7+ (GraalJS).
+ * IMPORTANT: In CM 22.7, Java Collection.toArray() returns a Java Object[] which does NOT
+ * have JS Array methods (.filter, .indexOf, .push etc). We must ensure we always return
+ * a proper JavaScript Array.
  * @param {(Set|Collection|Array|Object)} value The value to convert
  * @returns {Array} Plain JavaScript Array
  */
@@ -18,18 +18,52 @@ function toArray(value) {
     if (Array.isArray(value)) {
         return value;
     }
-    // Compatibility Mode 21.7 - Collection with toArray()
+    // Try Java Iterator FIRST - works for all Java Collections in both CM 21.7 and 22.7
+    // and always produces a proper JS Array
     try {
-        if (typeof value.toArray === 'function') {
-            return value.toArray();
+        if (typeof value.iterator === 'function') {
+            var iter = value.iterator();
+            var items = [];
+            while (iter.hasNext()) {
+                items.push(iter.next());
+            }
+            return items;
         }
     } catch (e) {
-        // Accessing .toArray on Java objects might throw
+        // fallthrough
     }
-    // Compatibility Mode 22.7+ - native Set, Java arrays, or other iterables
+    // Try Collection.toArray() + manual conversion to JS Array
+    // Must come before Array.from() — Array.from({toArray:fn}) returns [] without error,
+    // swallowing the result. In CM 22.7, toArray() returns Java Object[], so we manually
+    // copy into a JS Array to ensure .filter/.indexOf etc. are available.
+    try {
+        if (typeof value.toArray === 'function') {
+            var javaArr = value.toArray();
+            var arr = [];
+            for (var i = 0; i < javaArr.length; i++) {
+                arr.push(javaArr[i]);
+            }
+            return arr;
+        }
+    } catch (e) {
+        // fallthrough
+    }
+    // Try Array.from() - handles native JS Sets (CM 22.7+ getAllowedLocales) and Java arrays
     try {
         if (typeof Array.from === 'function') {
             return Array.from(value);
+        }
+    } catch (e) {
+        // fallthrough
+    }
+    // Try forEach - handles JS Sets and some Java Collections
+    try {
+        if (typeof value.forEach === 'function') {
+            var forEachResult = [];
+            value.forEach(function (item) {
+                forEachResult.push(item);
+            });
+            return forEachResult;
         }
     } catch (e) {
         // fallthrough
@@ -39,8 +73,8 @@ function toArray(value) {
         var len = value.length;
         if (typeof len === 'number') {
             var result = [];
-            for (var i = 0; i < len; i++) {
-                result.push(value[i]);
+            for (var j = 0; j < len; j++) {
+                result.push(value[j]);
             }
             return result;
         }

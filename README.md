@@ -3,7 +3,7 @@
 
 * **Description:**  Lengow is a central platform at the heart of your e-commerce strategy. Select and import your product data from SFCC to Lengow and optimize it for hundreds of different marketing channels.
 * **Version:** 22.1.0
-* **Compatibility:** <span style="color:red">This version of the Lengow cartridge is compatible with all the three frameworks of SFCC i.e. pipelines version 105.2.0, controllers version 105.2.0 and SFRA version 6.0.0. Cartridge has been tested against code compatibility version 21.7.</span>
+* **Compatibility:** This version of the Lengow cartridge is compatible with all the three frameworks of SFCC i.e. pipelines version 105.2.0, controllers version 105.2.0 and SFRA version 6.0.0. Cartridge has been tested against code compatibility versions 21.7, 22.7 (GraalJS) and 25.10+.
 
 ----
 ## Getting Started ##
