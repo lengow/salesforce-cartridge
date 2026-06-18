@@ -4,13 +4,18 @@
  * Initializing Lengow Drop Down Events
  */
 function initializeDropDownEvents() {
-    $('.selected-locale-dropdown, .locale-selection-items').hover(function () {
-        var localeSelection = $('.locale-selection-items');
+    var $dropdown = jQuery('.selected-locale-dropdown, .locale-selection-items');
+    if (!$dropdown || !$dropdown.length) {
+        return;
+    }
+
+    $dropdown.hover(function () {
+        var localeSelection = jQuery('.locale-selection-items');
         if (!localeSelection.hasClass('visible')) {
             localeSelection.addClass('visible');
         }
     }, function () {
-        var localeSelection = $('.locale-selection-items');
+        var localeSelection = jQuery('.locale-selection-items');
         if (localeSelection.hasClass('visible')) {
             localeSelection.removeClass('visible');
         }
@@ -19,9 +24,12 @@ function initializeDropDownEvents() {
     jQuery('.locale-selection-items li').on('click', function (e) {
         e.preventDefault();
         var ele = jQuery(this)[0];
-        var localeID = jQuery(this).find('input')[0].value;
+        var $input = jQuery(this).find('input');
+        if (!ele || !$input.length) return;
+        var localeID = $input[0].value;
         var checked = !ele.classList.contains('selected');
         var localeSelection = document.getElementsByClassName('locale-selection-items')[0];
+        if (!localeSelection) return;
         var url = localeSelection.dataset.url;
 
         jQuery.ajax({
@@ -34,7 +42,7 @@ function initializeDropDownEvents() {
         })
         .done(function (response) {
             jQuery('.lengow-dropdown').html(response);
-            $('body').trigger('initialize:dropdown');
+            jQuery('body').trigger('initialize:dropdown');
         });
     });
 }
@@ -43,7 +51,7 @@ function initializeDropDownEvents() {
  * Bind reinitialize event on body
  */
 function reInitializeDropDownEvents() {
-    $('body').on('initialize:dropdown', function () {
+    jQuery('body').on('initialize:dropdown', function () {
         initializeDropDownEvents();
     });
 }

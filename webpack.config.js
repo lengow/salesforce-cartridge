@@ -72,6 +72,7 @@ module.exports = [{
                 }, {
                     loader: 'sass-loader',
                     options: {
+                        implementation: require('sass'),
                         includePaths: [
                             path.resolve('node_modules'),
                             path.resolve('node_modules/flag-icon-css/sass')

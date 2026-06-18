@@ -17,9 +17,16 @@ function setCurrencyCode(localeID) {
         : countries.filter(function (country) {
             return country.id === currentLocale.ID;
         })[0];
-    Transaction.wrap(function () {
-        session.setCurrency(currency.getCurrency(currentCountry.currencyCode)); // eslint-disable-line
-    });
+    if (!currentCountry) {
+        return;
+    }
+    try {
+        Transaction.wrap(function () {
+            session.setCurrency(currency.getCurrency(currentCountry.currencyCode)); // eslint-disable-line
+        });
+    } catch (e) {
+        // Currency not allowed for this site, skip locale
+    }
 }
 
 module.exports = function (object) {

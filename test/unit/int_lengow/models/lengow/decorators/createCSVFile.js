@@ -4,7 +4,7 @@ require('app-module-path').addPath(process.cwd());
 require('app-module-path').addPath(process.cwd() + '/cartridges');
 var proxyquire = require('proxyquire').noCallThru().noPreserveCache();
 var sinon = require('sinon');
-var emptyStub = sinon.stub();
+var assert = require('chai').assert;
 var createCSVFile;
 
 function File() {
@@ -24,39 +24,123 @@ File.getRootDirectory = function () {
 };
 
 describe('cartridge/models/lengow/decorators: createCSVFile.js', function () {
-    global.Error = emptyStub;
+    describe('basic file creation without timestamp', function () {
+        before(function () {
+            createCSVFile = proxyquire('int_lengow/cartridge/models/lengow/decorators/createCSVFile', {
+                'dw/util/StringUtils': {
+                    formatCalendar: function () {
+                        return '28_02_2022';
+                    }
+                },
+                'dw/util/Calendar': function () { return {}; },
+                'dw/io/File': File
+            });
+        });
 
-    before(function () {
-        createCSVFile = proxyquire('int_lengow/cartridge/models/lengow/decorators/createCSVFile', {
-            'dw/util/StringUtils': {
-                formatCalendar: function () {
-                    return '28_02_2022';
+        it('should Create CSV File without timestamp', function () {
+            var object = {
+                config: {
+                    impexFolderName: 'lengow',
+                    fileName: 'lengow',
+                    siteID: 'MFRA',
+                    timeStamp: false
+                },
+                logger: {
+                    info: sinon.stub()
                 }
-            },
-            'dw/util/Calendar': function () {
-                return {};
-            },
-            'dw/io/File': File
+            };
+            createCSVFile(object);
+            var result = object.createCSVFile('en_US');
+            assert.isDefined(result);
         });
     });
 
-    afterEach(function () {
-        global.Error.reset();
+    describe('file creation with timestamp', function () {
+        before(function () {
+            createCSVFile = proxyquire('int_lengow/cartridge/models/lengow/decorators/createCSVFile', {
+                'dw/util/StringUtils': {
+                    formatCalendar: function () {
+                        return '_20260311_103000_123';
+                    }
+                },
+                'dw/util/Calendar': function () { return {}; },
+                'dw/io/File': File
+            });
+        });
+
+        it('should Create CSV File with timestamp when timeStamp is "true"', function () {
+            var infoStub = sinon.stub();
+            var object = {
+                config: {
+                    impexFolderName: 'lengow',
+                    fileName: 'lengow',
+                    siteID: 'MFRA',
+                    timeStamp: 'true'
+                },
+                logger: { info: infoStub }
+            };
+            createCSVFile(object);
+            object.createCSVFile('en_US');
+            assert.isTrue(infoStub.calledOnce);
+        });
     });
 
-    it('should Create CSV File', function () {
-        var object = {
-            config: {
-                impexFolderName: 'lengow',
-                fileName: 'lengow',
-                siteID: 'MFRA',
-                timeStamp: false
-            },
-            logger: {
-                info: emptyStub
-            }
-        };
-        createCSVFile(object);
-        object.createCSVFile('en_US');
+    describe('file creation with undefined locale', function () {
+        before(function () {
+            createCSVFile = proxyquire('int_lengow/cartridge/models/lengow/decorators/createCSVFile', {
+                'dw/util/StringUtils': {
+                    formatCalendar: function () { return ''; }
+                },
+                'dw/util/Calendar': function () { return {}; },
+                'dw/io/File': File
+            });
+        });
+
+        it('should not append locale when localeID is "undefined"', function () {
+            var object = {
+                config: {
+                    impexFolderName: 'lengow',
+                    fileName: 'lengow',
+                    siteID: 'MFRA',
+                    timeStamp: false
+                },
+                logger: { info: sinon.stub() }
+            };
+            createCSVFile(object);
+            object.createCSVFile('undefined');
+        });
+    });
+
+    describe('IMPEX folder does not exist and mkdirs fails', function () {
+        function FailingFile() {
+            this.exists = function () { return false; };
+            this.mkdirs = function () { return false; };
+            this.fullPath = 'impex/src/lengow/';
+        }
+        FailingFile.SEPARATOR = ',';
+        FailingFile.IMPEX = '/impex/';
+        FailingFile.getRootDirectory = function () { return '/impex/'; };
+
+        before(function () {
+            createCSVFile = proxyquire('int_lengow/cartridge/models/lengow/decorators/createCSVFile', {
+                'dw/util/StringUtils': { formatCalendar: function () { return ''; } },
+                'dw/util/Calendar': function () { return {}; },
+                'dw/io/File': FailingFile
+            });
+        });
+
+        it('should throw when IMPEX folder cannot be created', function () {
+            var object = {
+                config: {
+                    impexFolderName: 'lengow',
+                    fileName: 'lengow',
+                    siteID: 'MFRA',
+                    timeStamp: false
+                },
+                logger: { info: sinon.stub() }
+            };
+            createCSVFile(object);
+            assert.throws(function () { object.createCSVFile('en_US'); }, Error);
+        });
     });
 });
