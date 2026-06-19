@@ -18,18 +18,51 @@ function toArray(value) {
     if (Array.isArray(value)) {
         return value;
     }
-    // Compatibility Mode 21.7 - Collection with toArray()
+    // Try Java Iterator FIRST - works for all Java Collections in both CM 21.7 and 22.7
+    // and always produces a proper JS Array
     try {
-        if (typeof value.toArray === 'function') {
-            return value.toArray();
+        if (typeof value.iterator === 'function') {
+            var iter = value.iterator();
+            var items = [];
+            while (iter.hasNext()) {
+                items.push(iter.next());
+            }
+            return items;
         }
     } catch (e) {
-        // Accessing .toArray on Java objects might throw
+        // fallthrough
     }
-    // Compatibility Mode 22.7+ - native Set, Java arrays, or other iterables
+    // Try Collection.toArray() + manual copy to JS Array
+    // In CM 22.7, toArray() returns Java Object[] which lacks JS Array methods like .indexOf/.filter,
+    // so we manually copy into a JS Array to ensure full compatibility.
+    try {
+        if (typeof value.toArray === 'function') {
+            var javaArr = value.toArray();
+            var arr = [];
+            for (var i = 0; i < javaArr.length; i++) {
+                arr.push(javaArr[i]);
+            }
+            return arr;
+        }
+    } catch (e) {
+        // fallthrough
+    }
+    // Try Array.from() - handles native JS Sets (CM 22.7+ getAllowedLocales) and Java arrays
     try {
         if (typeof Array.from === 'function') {
             return Array.from(value);
+        }
+    } catch (e) {
+        // fallthrough
+    }
+    // Try forEach - handles JS Sets and some Java Collections
+    try {
+        if (typeof value.forEach === 'function') {
+            var forEachResult = [];
+            value.forEach(function (item) {
+                forEachResult.push(item);
+            });
+            return forEachResult;
         }
     } catch (e) {
         // fallthrough
@@ -39,8 +72,8 @@ function toArray(value) {
         var len = value.length;
         if (typeof len === 'number') {
             var result = [];
-            for (var i = 0; i < len; i++) {
-                result.push(value[i]);
+            for (var j = 0; j < len; j++) {
+                result.push(value[j]);
             }
             return result;
         }
