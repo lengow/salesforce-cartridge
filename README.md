@@ -3,7 +3,7 @@
 ## LINK Cartridge Developer Guide
 
 * **Description:** Lengow is a central platform at the heart of your e-commerce strategy. Select and import your product data from SFCC to Lengow and optimize it for hundreds of different marketing channels.
-* **Version:** 22.1.0
+* **Version:** 22.1.0 <!-- x-release-please-version -->
 * **Compatibility:** Compatible with SFRA 6.0.0 and 7.0.0, Compatibility Mode 21.7 and 22.7+. This cartridge is standalone and does not depend on SFRA at runtime. `bm_lengow` runs inside the Business Manager, `int_lengow` executes server-side jobs.
 
 ----
