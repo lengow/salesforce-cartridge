@@ -1,0 +1,14 @@
+.github/reviewers.yaml
+  h_f1bc121a0b2c55 1-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "2691c67f488c7e0ece5b7223dc4c103d02d869e7",
+  "prompts": {},
+  "humans": {
+    "h_f1bc121a0b2c55": {
+      "author": "Clement Idelon <clement.idelon@lengow.com>"
+    }
+  }
+}
