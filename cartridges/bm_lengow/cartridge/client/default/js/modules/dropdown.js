@@ -1,5 +1,7 @@
 'use strict';
 
+var jQuery = require('jquery');
+
 /**
  * Initializing Lengow Drop Down Events
  */
@@ -9,12 +11,15 @@ function initializeDropDownEvents() {
         return;
     }
 
-    $dropdown.hover(function () {
+    // mouseenter/mouseleave rather than .hover(): .hover() was removed in jQuery 4,
+    // and this bundle should survive a future jQuery bump.
+    $dropdown.on('mouseenter', function () {
         var localeSelection = jQuery('.locale-selection-items');
         if (!localeSelection.hasClass('visible')) {
             localeSelection.addClass('visible');
         }
-    }, function () {
+    });
+    $dropdown.on('mouseleave', function () {
         var localeSelection = jQuery('.locale-selection-items');
         if (localeSelection.hasClass('visible')) {
             localeSelection.removeClass('visible');
@@ -31,13 +36,15 @@ function initializeDropDownEvents() {
         var localeSelection = document.getElementsByClassName('locale-selection-items')[0];
         if (!localeSelection) return;
         var url = localeSelection.dataset.url;
+        var token = localeSelection.dataset.csrf || '';
 
         jQuery.ajax({
             type: 'POST',
             url: url,
             data: {
                 localeID: localeID,
-                checked: checked
+                checked: checked,
+                csrf_token: token
             }
         })
         .done(function (response) {
@@ -56,7 +63,7 @@ function reInitializeDropDownEvents() {
     });
 }
 
-jQuery(document).ready(function () {
+module.exports = function init() {
     initializeDropDownEvents();
     reInitializeDropDownEvents();
-});
+};

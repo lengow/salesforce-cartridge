@@ -1,3 +1,4 @@
+<input type="hidden" id="lengow-csrf-token" value="${pdict.csrfToken}" />
 <div class="extension-header">
     <h1 class="page-header">${Resource.msg('forms.lengow.dashboard.label', 'lengow', null)}</h1>
     <isif condition="${pdict.impexUrl}">

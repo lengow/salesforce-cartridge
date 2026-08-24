@@ -2,6 +2,8 @@
 
 require('app-module-path').addPath(process.cwd());
 require('app-module-path').addPath(process.cwd() + '/cartridges');
+
+var realCollections = require('int_lengow/cartridge/scripts/helpers/collections');
 var proxyquire = require('proxyquire').noCallThru().noPreserveCache();
 var sinon = require('sinon');
 var assert = require('chai').assert;
@@ -60,6 +62,10 @@ function buildStubs(siteMock, overrides) {
         isml: ismlStub,
         stubs: {
             'dw/template/ISML': ismlStub,
+            // The real helper is injected on purpose: toArray() is the code that fixes the
+            // CM 22.7 locale bug (PCMT-1347), so the controller tests must exercise it,
+            // not a stub of it.
+            '*/cartridge/scripts/helpers/collections': realCollections,
             'dw/system/Site': {
                 getCurrent: function () { return siteMock; }
             },
@@ -84,6 +90,10 @@ function buildStubs(siteMock, overrides) {
             },
             'dw/system/Transaction': ov.transaction || {
                 wrap: function (cb) { cb(); }
+            },
+            'dw/web/CSRFProtection': ov.csrfProtection || {
+                generateToken: function () { return 'test-csrf-token'; },
+                validateRequest: function () { return true; }
             },
             'dw/svc/LocalServiceRegistry': ov.serviceRegistry || {
                 createService: function (serviceName) {
@@ -173,7 +183,6 @@ function buildStubs(siteMock, overrides) {
 // ─────────────────────────────────────────────────────────────────────
 
 describe('bm_lengow/cartridge/controllers: LengowController.js', function () {
-
     beforeEach(function () {
         global.request = {
             httpParameterMap: {
@@ -195,7 +204,9 @@ describe('bm_lengow/cartridge/controllers: LengowController.js', function () {
 
     // ─── 1a. Compatibility Mode 21.7 (Collection with toArray) ───────
     describe('Compatibility Mode 21.7 (Collection with toArray)', function () {
-        var ctrl, isml, site;
+        var ctrl,
+            isml,
+            site;
 
         beforeEach(function () {
             site = createSiteMock({
@@ -239,7 +250,9 @@ describe('bm_lengow/cartridge/controllers: LengowController.js', function () {
 
     // ─── 1b. Compatibility Mode 22.7+ (Native Set) ──────────────────
     describe('Compatibility Mode 22.7+ (Native Set)', function () {
-        var ctrl, isml, site;
+        var ctrl,
+            isml,
+            site;
 
         beforeEach(function () {
             site = createSiteMock({
@@ -284,7 +297,8 @@ describe('bm_lengow/cartridge/controllers: LengowController.js', function () {
 
     // ─── 1c. Compatibility Mode 22.7 (Java String Array simulation) ─
     describe('Compatibility Mode 22.7 (Java String Array)', function () {
-        var ctrl, isml;
+        var ctrl,
+            isml;
 
         function createJavaArrayLike(items) {
             var obj = { length: items.length };
@@ -348,7 +362,9 @@ describe('bm_lengow/cartridge/controllers: LengowController.js', function () {
     // ─────────────────────────────────────────────────────────────────
 
     describe('Template arguments verification', function () {
-        var ctrl, isml, site;
+        var ctrl,
+            isml,
+            site;
 
         beforeEach(function () {
             site = createSiteMock({
@@ -408,7 +424,9 @@ describe('bm_lengow/cartridge/controllers: LengowController.js', function () {
     // ─────────────────────────────────────────────────────────────────
 
     describe('submit() – save flow', function () {
-        var ctrl, isml, site;
+        var ctrl,
+            isml,
+            site;
 
         beforeEach(function () {
             site = createSiteMock({
@@ -467,7 +485,6 @@ describe('bm_lengow/cartridge/controllers: LengowController.js', function () {
     });
 
     describe('submit() – BUG: missing error handling (no try-catch)', function () {
-
         it('should CRASH if getProductSystemObjectDefinitions throws (unlike manage which catches)', function () {
             var site = createSiteMock();
             var b = buildStubs(site, {
@@ -555,7 +572,9 @@ describe('bm_lengow/cartridge/controllers: LengowController.js', function () {
     // ─────────────────────────────────────────────────────────────────
 
     describe('updateLocale() – locale selection logic', function () {
-        var ctrl, isml, site;
+        var ctrl,
+            isml,
+            site;
 
         beforeEach(function () {
             site = createSiteMock({
@@ -646,7 +665,6 @@ describe('bm_lengow/cartridge/controllers: LengowController.js', function () {
     });
 
     describe('updateLocale() – BUG: missing error handling (no try-catch)', function () {
-
         it('should NOT crash if getAllowedLocalesArray returns empty (toArray absorbs errors)', function () {
             // toArray() catches all errors internally and returns []
             // So updateLocale() doesn't crash, but SILENTLY fails
@@ -695,7 +713,6 @@ describe('bm_lengow/cartridge/controllers: LengowController.js', function () {
     // ─────────────────────────────────────────────────────────────────
 
     describe('Edge cases – null/empty preferences', function () {
-
         it('manage() should handle null lengowSeletedLocales gracefully', function () {
             var site = createSiteMock({
                 preferenceValues: { lengowSeletedLocales: null }
@@ -786,7 +803,6 @@ describe('bm_lengow/cartridge/controllers: LengowController.js', function () {
     // ─────────────────────────────────────────────────────────────────
 
     describe('getProductSystemObjectDefinitions – SystemObjectMgr', function () {
-
         it('should filter out image and thumbnail from product attributes', function () {
             var site = createSiteMock();
             var b = buildStubs(site);
@@ -844,7 +860,6 @@ describe('bm_lengow/cartridge/controllers: LengowController.js', function () {
     // ─────────────────────────────────────────────────────────────────
 
     describe('PCMT-1351 Merchant Bug – SFCC 25.10 scenarios', function () {
-
         it('Scenario 1: OCAPI fails during submit() → merchant thinks save failed but data was actually saved', function () {
             // This is the most likely bug scenario:
             // 1. manage() works (OCAPI result is cached on first load)
@@ -1011,6 +1026,71 @@ describe('bm_lengow/cartridge/controllers: LengowController.js', function () {
             assert.isFalse(data.success);
             assert.isString(data.errorMessage);
             assert.ok(data.errorMessage.length > 0, 'errorMessage should not be empty');
+        });
+    });
+    describe('CSRF protection', function () {
+        var rejectingCsrf = {
+            generateToken: function () { return 'test-csrf-token'; },
+            validateRequest: function () { return false; }
+        };
+
+        it('should hand a CSRF token to the Manage template so the client can echo it back', function () {
+            var site = createSiteMock({});
+            var b = buildStubs(site);
+            var ctrl = proxyquire('bm_lengow/cartridge/controllers/LengowController', b.stubs);
+
+            ctrl.Manage();
+
+            var data = b.isml.renderTemplate.firstCall.args[1];
+            assert.equal(data.csrfToken, 'test-csrf-token');
+        });
+
+        it('should refuse Submit and write nothing when the token is invalid', function () {
+            var site = createSiteMock({
+                preferenceValues: { lengowMandatoryAttributes: '{"system":[],"custom":[]}' }
+            });
+            var b = buildStubs(site, { csrfProtection: rejectingCsrf });
+            var ctrl = proxyquire('bm_lengow/cartridge/controllers/LengowController', b.stubs);
+
+            global.request = {
+                httpParameterMap: {
+                    type: { stringValue: 'mandatory' },
+                    attributesJSON: { stringValue: '{"system":[{"id":"EAN"}],"custom":[]}' }
+                }
+            };
+
+            ctrl.Submit();
+
+            assert.equal(b.isml.renderTemplate.firstCall.args[0], 'lengow/csrffailure');
+            assert.equal(
+                site.preferences.custom.lengowMandatoryAttributes,
+                '{"system":[],"custom":[]}',
+                'the forged request must not have written the preference'
+            );
+            delete global.request;
+        });
+
+        it('should refuse UpdateLocale and write nothing when the token is invalid', function () {
+            var site = createSiteMock({ preferenceValues: { lengowSeletedLocales: ['en_US'] } });
+            var b = buildStubs(site, { csrfProtection: rejectingCsrf });
+            var ctrl = proxyquire('bm_lengow/cartridge/controllers/LengowController', b.stubs);
+
+            global.request = {
+                httpParameterMap: {
+                    localeID: { value: 'fr_FR' },
+                    checked: { value: 'true' }
+                }
+            };
+
+            ctrl.UpdateLocale();
+
+            assert.equal(b.isml.renderTemplate.firstCall.args[0], 'lengow/csrffailure');
+            assert.deepEqual(
+                site.preferences.custom.lengowSeletedLocales,
+                ['en_US'],
+                'the forged request must not have changed the selected locales'
+            );
+            delete global.request;
         });
     });
 });

@@ -19,9 +19,15 @@ Status.ERROR = 1;
 describe('int_lengow/cartridge/scripts/jobs: generateLengowCatalog.js', function () {
     var generateLengowCatalog;
 
-    var baseStub, setCatalogFeedLocaleStub, setCurrencyCodeStub;
-    var createCSVFileStub, createFileWriterStub, createCSVStreamWriterStub;
-    var writeCSVStub, generateCatalogStub, uploadCSVStub;
+    var baseStub,
+        setCatalogFeedLocaleStub,
+        setCurrencyCodeStub;
+    var createCSVFileStub,
+        createFileWriterStub,
+        createCSVStreamWriterStub;
+    var writeCSVStub,
+        generateCatalogStub,
+        uploadCSVStub;
 
     beforeEach(function () {
         baseStub = sinon.stub();

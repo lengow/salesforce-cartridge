@@ -1,5 +1,20 @@
 'use strict';
 
+// jQuery is bundled rather than pulled from a CDN: the Business Manager ships its own
+// jQuery, an external <script> can be blocked by BM CSP, and loading 1.12.4 over the top
+// used to clobber the BM's own $ (F1).
+var jQuery = require('jquery');
+var initDropdown = require('./modules/dropdown');
+
+/**
+ * Reads the CSRF token rendered by the controller.
+ * @returns {string} token, or empty string if the field is absent
+ */
+function csrfToken() {
+    var field = document.getElementById('lengow-csrf-token');
+    return field ? field.value : '';
+}
+
 /**
  * Initializing Tab Events
  */
@@ -70,7 +85,8 @@ function initializeTabEvents() {
                 url: url,
                 data: {
                     type: type,
-                    attributesJSON: JSON.stringify(finalJSON)
+                    attributesJSON: JSON.stringify(finalJSON),
+                    csrf_token: csrfToken()
                 }
             })
             .done(function (response) {
@@ -98,7 +114,8 @@ function initializeTabEvents() {
                 type: 'POST',
                 url: url,
                 data: {
-                    type: 'reset'
+                    type: 'reset',
+                    csrf_token: csrfToken()
                 }
             })
             .done(function (response) {
@@ -185,5 +202,6 @@ function initializeTabEvents() {
 // Initialize
 jQuery(document).ready(function () {
     initializeTabEvents();
+    initDropdown();
     jQuery('.tablinks.defaultOpen').click();
 });

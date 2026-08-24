@@ -4,6 +4,26 @@ var File = require('dw/io/File');
 var LengowSFTPService = require('~/cartridge/scripts/init/lengowSFTPService');
 
 /**
+ * Joins a remote SFTP path with a file name, guaranteeing exactly one separator.
+ * Without this the log messages read like "sftp://hostfolderfile.csv", which is
+ * the only place a merchant can diagnose a failed upload.
+ * @param {string} base - service URL or remote folder
+ * @param {string} name - file name
+ * @returns {string} joined path
+ */
+function joinRemote(base, name) {
+    var left = base ? String(base) : '';
+    var right = name ? String(name) : '';
+    if (left.charAt(left.length - 1) === '/') {
+        left = left.substring(0, left.length - 1);
+    }
+    if (right.charAt(0) === '/') {
+        right = right.substring(1);
+    }
+    return left + '/' + right;
+}
+
+/**
  * Uploads generated catalog(s) found at IMPEX/src/lengow folder
  * and uploads it Lengow SFTP folder, configured in Lengow Site Preferences.
  */
@@ -64,7 +84,7 @@ function uploadCSV() {
         if (uploadedCsvFiles.length > 0) {
             logger.info('Successfully Uploaded CSV Files:\n{0}',
                 uploadedCsvFiles.map(function (uploadCsvFile) {
-                    return (uploadCsvFile.fullPath + ' => ' + (sftpService.getURL() + uploadToPath + uploadCsvFile.name));
+                    return (uploadCsvFile.fullPath + ' => ' + joinRemote(joinRemote(sftpService.getURL(), uploadToPath), uploadCsvFile.name));
                 }).join('\n') // eslint-disable-line no-shadow
             );
         }
@@ -72,7 +92,7 @@ function uploadCSV() {
         if (failedCsvFiles.length > 0) {
             logger.error('Failed Upload CSV Files:\n{0}',
                 failedCsvFiles.map(function (failedCsvFile) {
-                    return (failedCsvFile.fullPath + '=> ' + (sftpService.getURL() + uploadToPath + failedCsvFile.name));
+                    return (failedCsvFile.fullPath + ' => ' + joinRemote(joinRemote(sftpService.getURL(), uploadToPath), failedCsvFile.name));
                 }).join('\n') // eslint-disable-line no-shadow
             );
         }
@@ -104,6 +124,15 @@ function uploadCSV() {
             if (failedZippedCsvFiles.length > 0) {
                 logger.error('Failed Zip CSV Files:\n{0}', failedZippedCsvFiles.join('\n'));
             }
+        }
+
+        // Surface upload failures to the job framework. Without this the step returns
+        // Status.OK even when every single transfer failed, so the merchant sees a green
+        // job while Lengow receives nothing. Archiving of the files that DID upload has
+        // already happened above, so throwing here loses no work.
+        if (failedCsvFiles.length > 0) {
+            throw new Error('SFTP upload failed for ' + failedCsvFiles.length + ' of ' + csvFiles.length
+                + ' file(s). See the LENGOW custom log for the list.');
         }
     }
 }

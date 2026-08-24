@@ -89,7 +89,6 @@ function createSFTPService(options) {
 }
 
 describe('cartridge/models/lengow/decorators: uploadCSV.js', function () {
-
     describe('folder not found (not a directory)', function () {
         before(function () {
             var FileStub = createFileConstructor({ isDirectory: false });
@@ -210,15 +209,16 @@ describe('cartridge/models/lengow/decorators: uploadCSV.js', function () {
             });
         });
 
-        it('should log failed uploads', function () {
+        it('should log failed uploads AND throw so the job reports ERROR', function () {
             var errorStub = sinon.stub();
             var object = {
                 config: { impexFolderName: 'src/lengow', archiveFolderName: 'archive' },
                 sftpConfig: { sftpFolderName: '/upload', serviceID: 'LengowSFTP' },
                 logger: { error: errorStub, info: sinon.stub() }
             };
-            uploadCSV(object);
-            object.uploadCSV();
+            // uploadCSV() is invoked by the decorator itself, so the throw surfaces here
+            assert.throws(function () { uploadCSV(object); }, /SFTP upload failed for 1 of 1/);
+
             var hasFailMsg = errorStub.getCalls().some(function (call) {
                 return typeof call.args[0] === 'string' && call.args[0].indexOf('Failed Upload') > -1;
             });
@@ -303,16 +303,16 @@ describe('cartridge/models/lengow/decorators: uploadCSV.js', function () {
             });
         });
 
-        it('should not throw (mkdir returns false, but cd path is not re-attempted if mkdir fails)', function () {
+        it('should not throw on the mkdir branch itself, but still fail on the failed transfer', function () {
             var object = {
                 config: { impexFolderName: 'src/lengow', archiveFolderName: 'archive' },
                 sftpConfig: { sftpFolderName: '/upload', serviceID: 'LengowSFTP' },
                 logger: { error: sinon.stub(), info: sinon.stub() }
             };
-            uploadCSV(object);
-            // mkdir returns false so the inner if(!sftpService.call('mkdir', sftpPath).ok) is false
-            // meaning we don't enter the inner if block, so no throw
-            assert.doesNotThrow(function () { object.uploadCSV(); });
+            // mkdir returns false, so the inner if(!sftpService.call('mkdir', ...).ok) is false and
+            // the "Cannot cd to SFTP folder" error is never raised. The step still has to fail,
+            // because the transfer itself did not succeed.
+            assert.throws(function () { uploadCSV(object); }, /SFTP upload failed for 1 of 1/);
         });
     });
 

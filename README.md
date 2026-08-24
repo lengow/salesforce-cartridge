@@ -4,7 +4,10 @@
 
 * **Description:** Lengow is a central platform at the heart of your e-commerce strategy. Select and import your product data from SFCC to Lengow and optimize it for hundreds of different marketing channels.
 * **Version:** 22.1.0 <!-- x-release-please-version -->
-* **Compatibility:** Compatible with SFRA 6.0.0 and 7.0.0, Compatibility Mode 21.7 and 22.7+. This cartridge is standalone and does not depend on SFRA at runtime. `bm_lengow` runs inside the Business Manager, `int_lengow` executes server-side jobs.
+* **Compatibility:**
+  * **Independent of SFRA.** The cartridge has no SFRA runtime dependency — no `module.superModule`, no `require('server')`, no reference to `app_storefront_base`. It works the same on SFRA 5, 6, 7 and 8, and an SFRA major upgrade cannot break it. `bm_lengow` runs inside the Business Manager, `int_lengow` executes server-side jobs.
+  * **Compatibility mode: verified on 22.7**, the most recent mode Salesforce offers. Full test matrix run on 24 August 2026.
+  * The code is ES5 only, so it parses and runs under older modes too. Those have not been re-verified: compatibility mode is instance-wide and can only be changed upward, so a sandbox already on 22.7 cannot be moved back down to test them.
 
 ----
 
@@ -91,7 +94,34 @@ int_lengow:[existing cartridges]
 
 > Repeat for **every site** that needs to export a catalog to Lengow.
 
-After saving, the **Lengow** menu should appear under **Merchant Tools** when you select the correct site.
+> `bm_lengow` requires `int_lengow` to be in the **Business Manager** cartridge path as well — the controller resolves the shared `*/cartridge/scripts/helpers/collections` module from it.
+
+### Step 3b — Grant the Lengow module to your Business Manager role
+
+**The menu will NOT appear after Step 3 alone.** Adding the cartridge only makes the module *available*; a role still has to be granted access to it.
+
+1. **Administration > Organization > Roles & Permissions**
+2. Click your role (typically `Administrator`)
+3. Open the **Business Manager Modules** tab
+4. Click **Select Context**, tick the site(s) that will export to Lengow, click **Apply**
+5. Tick the **Write** checkbox on both **Lengow** and **Export Attributes Configurations**
+6. Click **Update** at the bottom of the page
+
+The **Lengow** menu now appears under **Merchant Tools** when the matching site is selected.
+
+### Step 3c — Re-activate your code version
+
+If you uploaded the cartridges into a code version that was **already active**, the custom job step types are not registered yet. The job you import in Step 5 will show *"The job is invalid"* with:
+
+```
+Invalid step [Lengow Generate Feed]! Type with id [custom.LengowCatalogFeed] is unknown!
+```
+
+`steptypes.json` is scanned only when a code version is activated. Fix:
+
+**Administration > Site Development > Code Deployment** — activate any other code version, then activate yours again.
+
+> Deploying into a *new* code version and activating it once avoids this entirely.
 
 ### Step 4 — Configure the SFTP service
 
@@ -203,8 +233,21 @@ npm run lint       # Lint all JavaScript and SCSS files
 
 ### The Lengow menu does not appear in the BM
 
-- Verify that `bm_lengow` is in the **Business Manager** site cartridge path
-- Verify that you have selected the correct site in the site selector
+In order of likelihood:
+
+1. **The module is not granted to your role** — this is by far the most common cause, and the cartridge path being correct is not enough. See **Step 3b**.
+2. `bm_lengow` is not in the **Business Manager** site cartridge path (Step 3)
+3. The wrong site is selected in the site selector
+
+### The job is marked "invalid" — `custom.LengowCatalogFeed` is unknown
+
+The step types were not registered because the cartridges landed in an already-active code version. See **Step 3c**.
+
+### The job finishes green but Lengow receives nothing
+
+This was a real bug up to and including v22.1.0: every SFTP transfer could fail and the job still reported `OK`. It is fixed — the step now returns `ERROR` when any file fails to upload.
+
+If you are on an older version, check the custom `LENGOW` log for `Failed Upload CSV Files` even when the job looks successful.
 
 ### "Module not found" error when running the job
 

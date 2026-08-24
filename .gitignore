@@ -1,3 +1,18 @@
 node_modules
 cartridges/int_lengow/cartridge/static/
-cartridges/bm_lengow/cartridge/static/
+cartridges/bm_lengow/cartridge/static/**
+# ...sauf les images, qui sont des sources et non du build output
+!cartridges/bm_lengow/cartridge/static/default/
+!cartridges/bm_lengow/cartridge/static/default/images/
+!cartridges/bm_lengow/cartridge/static/default/images/**
+
+# Local credentials — never commit
+dw.json
+cookies.txt
+coverage/
+.DS_Store
+.idea/
+
+# Internal audit docs — not for the public repo
+documentation/DISCOVERY.md
+documentation/TECHNICAL-CHANGES.md
