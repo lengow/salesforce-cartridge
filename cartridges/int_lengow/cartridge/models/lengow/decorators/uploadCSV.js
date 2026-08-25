@@ -70,7 +70,11 @@ function uploadCSV() {
         while (uploadingCsvFiles.hasNext()) {
             var csvFile = uploadingCsvFiles.next();
             try {
-                var serviceResult = sftpService.call('putBinary', (uploadToPath + csvFile.name), csvFile);
+                // joinRemote, not string concatenation: '/upload' + 'feed.csv' used to produce
+                // '/uploadfeed.csv', so the transfer only landed in the right place when the
+                // merchant happened to end SftpFolderName with a slash. Nothing documented that,
+                // and on a permissive server the file silently went to the wrong path.
+                var serviceResult = sftpService.call('putBinary', joinRemote(uploadToPath, csvFile.name), csvFile);
                 var isUploadSuccessful = serviceResult.getObject();
                 if (!serviceResult.isOk() || !isUploadSuccessful) {
                     throw new Error('SFTP Service: couldn\'t upload file: ' + csvFile.getFullPath() + ' error: ' + serviceResult.getErrorMessage());

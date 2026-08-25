@@ -410,4 +410,93 @@ describe('cartridge/models/lengow/decorators: uploadCSV.js', function () {
             assert.isTrue(hasCreateFailMsg, 'Should log cannot create zip archive');
         });
     });
+    describe('remote path construction (F15)', function () {
+        it('should join the SFTP folder and the file name with exactly one slash', function () {
+            var putPaths = [];
+            var csvFile1 = {
+                name: 'catalog_en.csv',
+                fullPath: '/impex/src/lengow/catalog_en.csv',
+                getFullPath: function () { return this.fullPath; },
+                zip: sinon.stub(),
+                remove: sinon.stub()
+            };
+            var FileStub = createFileConstructor({ csvFiles: [csvFile1], fileExists: false });
+            var capturingService = {
+                getService: function () {
+                    return {
+                        call: function (method, path) {
+                            if (method === 'putBinary') {
+                                putPaths.push(path);
+                                return {
+                                    getObject: function () { return true; },
+                                    isOk: function () { return true; },
+                                    getErrorMessage: function () { return ''; }
+                                };
+                            }
+                            return { ok: true };
+                        },
+                        getURL: function () { return 'sftp://lengow.io'; }
+                    };
+                }
+            };
+            var mod = proxyquire('int_lengow/cartridge/models/lengow/decorators/uploadCSV', {
+                'dw/io/File': FileStub,
+                '~/cartridge/scripts/init/lengowSFTPService': capturingService
+            });
+
+            var object = {
+                config: { impexFolderName: 'src/lengow', archiveFolderName: 'archive' },
+                // no trailing slash - this is what the README and the metadata default look like
+                sftpConfig: { sftpFolderName: '/upload', serviceID: 'LengowSFTP' },
+                logger: { error: sinon.stub(), info: sinon.stub() }
+            };
+            mod(object);
+
+            assert.deepEqual(putPaths, ['/upload/catalog_en.csv'],
+                'must not produce /uploadcatalog_en.csv');
+        });
+
+        it('should not double the slash when the folder already ends with one', function () {
+            var putPaths = [];
+            var csvFile1 = {
+                name: 'catalog_en.csv',
+                fullPath: '/impex/src/lengow/catalog_en.csv',
+                getFullPath: function () { return this.fullPath; },
+                zip: sinon.stub(),
+                remove: sinon.stub()
+            };
+            var FileStub = createFileConstructor({ csvFiles: [csvFile1], fileExists: false });
+            var capturingService = {
+                getService: function () {
+                    return {
+                        call: function (method, path) {
+                            if (method === 'putBinary') {
+                                putPaths.push(path);
+                                return {
+                                    getObject: function () { return true; },
+                                    isOk: function () { return true; },
+                                    getErrorMessage: function () { return ''; }
+                                };
+                            }
+                            return { ok: true };
+                        },
+                        getURL: function () { return 'sftp://lengow.io'; }
+                    };
+                }
+            };
+            var mod = proxyquire('int_lengow/cartridge/models/lengow/decorators/uploadCSV', {
+                'dw/io/File': FileStub,
+                '~/cartridge/scripts/init/lengowSFTPService': capturingService
+            });
+
+            var object = {
+                config: { impexFolderName: 'src/lengow', archiveFolderName: 'archive' },
+                sftpConfig: { sftpFolderName: '/upload/', serviceID: 'LengowSFTP' },
+                logger: { error: sinon.stub(), info: sinon.stub() }
+            };
+            mod(object);
+
+            assert.deepEqual(putPaths, ['/upload/catalog_en.csv']);
+        });
+    });
 });
