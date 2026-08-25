@@ -6,8 +6,9 @@
 * **Version:** 22.1.0 <!-- x-release-please-version -->
 * **Compatibility:**
   * **Independent of SFRA.** The cartridge has no SFRA runtime dependency — no `module.superModule`, no `require('server')`, no reference to `app_storefront_base`. It works the same on SFRA 5, 6, 7 and 8, and an SFRA major upgrade cannot break it. `bm_lengow` runs inside the Business Manager, `int_lengow` executes server-side jobs.
-  * **Compatibility mode: verified on 22.7**, the most recent mode Salesforce offers. Full test matrix run on 24 August 2026.
-  * The code is ES5 only, so it parses and runs under older modes too. Those have not been re-verified: compatibility mode is instance-wide and can only be changed upward, so a sandbox already on 22.7 cannot be moved back down to test them.
+  * **Compatibility modes 15.5 through 22.7 are supported.** 22.7 — the most recent mode Salesforce offers — was verified end to end on 25 August 2026. Earlier modes rest on a per-mode analysis of every behavioural change Salesforce documents, checked against the APIs this cartridge actually calls, together with field evidence from live installations.
+  * **Below 15.5 is not supported.** That is the mode where Salesforce established the `require()` / `module.exports` model this cartridge is built on; earlier modes do not have those semantics.
+  * Lab-testing each older mode is not possible: the compatibility mode is instance-wide and only moves forward, so an instance already on 22.7 cannot be moved back down.
 
 ----
 
@@ -51,16 +52,20 @@ SFCC (LengowUploadFeed)  ──push──▶  your SFTP  ◀──pull──  Le
 
 The same host, user and password go in both places. Plain FTP is not supported — SFTP only.
 
-### Verified compatibility
+### Compatibility
 
 | | |
 |---|---|
-| Platform release | 26.9 |
-| **Compatibility mode** | **22.7 — verified end to end** |
-| SFRA | irrelevant; the cartridge has no SFRA runtime dependency (tested alongside SFRA 8.0.0) |
+| **Compatibility modes** | **15.5 → 22.7 supported.** 22.7 verified end to end |
+| Platform release | any — every `dw.*` API used here is old and stable |
+| SFRA | irrelevant; no SFRA runtime dependency (tested alongside SFRA 8.0.0) |
 | Node (build only) | 20, with `NODE_OPTIONS=--openssl-legacy-provider` |
 
-The server code is ES5 only, so it parses and runs under older compatibility modes as well. Those have not been re-verified: the compatibility mode is instance-wide and can only be changed **upward**, so an instance already on 22.7 cannot be moved back down to test them.
+The server code is strict ES5. Support for modes below 22.7 rests on a per-mode analysis — every behavioural change Salesforce documents for each mode, checked against the APIs this cartridge calls — plus field evidence from live installations.
+
+**Below 15.5 is not supported**: 15.5 is where Salesforce established the `require()` / `module.exports` model this cartridge is built on.
+
+Lab-testing each older mode is not possible — the mode is instance-wide and only moves forward, so an instance already on 22.7 cannot be moved back down.
 
 ### The whole install in one glance
 
