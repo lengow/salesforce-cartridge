@@ -7,7 +7,7 @@
 * **Compatibility:**
   * **Independent of SFRA.** The cartridge has no SFRA runtime dependency — no `module.superModule`, no `require('server')`, no reference to `app_storefront_base`. It works the same on SFRA 5, 6, 7 and 8, and an SFRA major upgrade cannot break it. `bm_lengow` runs inside the Business Manager, `int_lengow` executes server-side jobs.
   * **Compatibility modes 15.5 through 22.7 are supported.** 22.7 — the most recent mode Salesforce offers — was verified end to end on 25 August 2026. Earlier modes rest on a per-mode analysis of every behavioural change Salesforce documents, checked against the APIs this cartridge actually calls, together with field evidence from live installations.
-  * **Below 15.5 is not supported.** That is the mode where Salesforce established the `require()` / `module.exports` model this cartridge is built on; earlier modes do not have those semantics.
+  * **Below 15.5 is not supported.** 15.5 is where Salesforce changed how modules behave: `require()` gained proper isolation, module-level globals stopped leaking across scopes, and JSON parsing became strict. This cartridge is written against those semantics. Earlier modes are untested and long past end of life.
   * Lab-testing each older mode is not possible: the compatibility mode is instance-wide and only moves forward, so an instance already on 22.7 cannot be moved back down.
 
 ----
@@ -63,7 +63,7 @@ The same host, user and password go in both places. Plain FTP is not supported �
 
 The server code is strict ES5. Support for modes below 22.7 rests on a per-mode analysis — every behavioural change Salesforce documents for each mode, checked against the APIs this cartridge calls — plus field evidence from live installations.
 
-**Below 15.5 is not supported**: 15.5 is where Salesforce established the `require()` / `module.exports` model this cartridge is built on.
+**Below 15.5 is not supported**: 15.5 is where Salesforce changed module behaviour — `require()` isolation, module-level globals no longer leaking across scopes, strict JSON parsing — and this cartridge is written against those semantics.
 
 Lab-testing each older mode is not possible — the mode is instance-wide and only moves forward, so an instance already on 22.7 cannot be moved back down.
 
