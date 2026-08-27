@@ -56,8 +56,14 @@ function uploadCSV() {
 
         // upload csv files to Lengow SFTP folder
         if (sftpPath && sftpPath !== '/' && !sftpService.call('cd', sftpPath).ok) {
-            // try to create SFTP folder if it does not exist, if created do a cd
-            if (sftpService.call('mkdir', sftpPath).ok && !sftpService.call('cd', sftpPath).ok) {
+            // The folder does not exist yet: create it, then enter it. Each call has to be
+            // checked on its own. Testing `mkdir(...).ok && !cd(...).ok` let a *failed* mkdir
+            // short-circuit the whole condition, so nothing was thrown and the step went on to
+            // upload into whatever directory the session happened to be sitting in.
+            if (!sftpService.call('mkdir', sftpPath).ok) {
+                throw new Error('Cannot create SFTP folder ' + sftpPath);
+            }
+            if (!sftpService.call('cd', sftpPath).ok) {
                 throw new Error('Cannot cd to SFTP folder ' + sftpPath);
             }
         }
@@ -65,6 +71,10 @@ function uploadCSV() {
         // upload csv files to SFTP folder
         var uploadedCsvFiles = [];
         var failedCsvFiles = [];
+        // Kept alongside failedCsvFiles, same index. Without the reason the log records only
+        // source and destination paths, so an authentication failure, a network drop, a
+        // permission error and a bad remote path all look identical to whoever reads it.
+        var failedCsvReasons = [];
         var uploadToPath = sftpPath || '/';
         var uploadingCsvFiles = csvFiles.iterator();
         while (uploadingCsvFiles.hasNext()) {
@@ -82,6 +92,7 @@ function uploadCSV() {
                 uploadedCsvFiles.push(csvFile);
             } catch (e) {
                 failedCsvFiles.push(csvFile);
+                failedCsvReasons.push((e && e.message) ? e.message : String(e));
             }
         }
 
@@ -95,8 +106,9 @@ function uploadCSV() {
 
         if (failedCsvFiles.length > 0) {
             logger.error('Failed Upload CSV Files:\n{0}',
-                failedCsvFiles.map(function (failedCsvFile) {
-                    return (failedCsvFile.fullPath + ' => ' + joinRemote(joinRemote(sftpService.getURL(), uploadToPath), failedCsvFile.name));
+                failedCsvFiles.map(function (failedCsvFile, failedIndex) {
+                    return (failedCsvFile.fullPath + ' => ' + joinRemote(joinRemote(sftpService.getURL(), uploadToPath), failedCsvFile.name)
+                        + '\n    reason: ' + failedCsvReasons[failedIndex]);
                 }).join('\n') // eslint-disable-line no-shadow
             );
         }

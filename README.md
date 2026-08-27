@@ -248,7 +248,9 @@ One CSV file is generated **per selected locale** (see Step 6), named:
 
 **Scope**: select **Organization** (not a specific site). This is correct and verified — the step runs fine in organization context.
 
-What this step does, in order: connect, `cd` into `SftpFolderName` (creating it if absent), transfer each CSV, ZIP the transferred files into `<ImpexFolderName>/archive/`, then delete them from IMPEX. If **any** transfer fails, the step ends in `ERROR` and the files stay in IMPEX for the next run.
+What this step does, in order: connect, `cd` into `SftpFolderName` (creating it if absent), transfer each CSV, ZIP the transferred files into `<ImpexFolderName>/archive/`, then delete them from IMPEX.
+
+If **any** transfer fails, the step ends in `ERROR`. Archiving still happens first, so a partial failure is handled cleanly: the CSVs that **did** transfer are zipped into `archive/` and removed from IMPEX, and only the ones that **failed** are left behind for the next run. Do not expect every file to still be sitting in IMPEX after an `ERROR` — what remains there is exactly the list of files that did not make it.
 
 In the **Schedule and History** tab, set a recurrence (recommended: every 6 to 12 hours). You can test manually with **Run Now**.
 
@@ -389,8 +391,6 @@ The connection worked but the file was not found. In order of likelihood:
 1. The SFCC job has not run yet, or its upload step failed — check the job status and the custom log
 2. The **Path** or **File name** in Lengow does not match what the job produces — compare against `IMPEX/src/lengow/` before the upload, or your SFTP folder after
 3. `IncludeTimeStamp` was set to `true`, so the file name changed (Step 5)
-
-### OpenSSL error during build
 
 ### OpenSSL error during build
 
