@@ -174,7 +174,8 @@ function manage() {
             selectedLocales: selectedLocales,
             impexUrl: impexUrl,
             jobURL: jobURL,
-            csrfToken: CSRFProtection.generateToken()
+            csrfToken: CSRFProtection.generateToken(),
+            csrfTokenName: CSRFProtection.getTokenName()
         });
     } catch (e) {
         ISML.renderTemplate('lengow/lengowMainDashboard', {
@@ -187,7 +188,8 @@ function manage() {
             selectedLocales: [],
             impexUrl: '',
             jobURL: '',
-            csrfToken: CSRFProtection.generateToken()
+            csrfToken: CSRFProtection.generateToken(),
+            csrfTokenName: CSRFProtection.getTokenName()
         });
     }
 }
@@ -234,7 +236,8 @@ function submit() {
         selectedLocales: selectedLocales,
         impexUrl: impexUrl,
         jobURL: jobURL,
-        csrfToken: CSRFProtection.generateToken()
+        csrfToken: CSRFProtection.generateToken(),
+        csrfTokenName: CSRFProtection.getTokenName()
     });
 }
 
@@ -274,7 +277,8 @@ function updateLocale() {
         allowedLocales: allowedLocales,
         selectedLocales: selectedLocales,
         isAjax: true,
-        csrfToken: CSRFProtection.generateToken()
+        csrfToken: CSRFProtection.generateToken(),
+        csrfTokenName: CSRFProtection.getTokenName()
     });
 }
 

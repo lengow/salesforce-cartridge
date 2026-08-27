@@ -16,6 +16,22 @@ function csrfToken() {
 }
 
 /**
+ * Builds the CSRF entry of an AJAX payload under the parameter name the platform expects.
+ * CSRFProtection.validateRequest() looks up the parameter named by getTokenName(); hard-coding
+ * 'csrf_token' happens to match today but is not the API contract, so the name is rendered
+ * alongside the token and used as the key here.
+ * @param {Object} data - payload to extend
+ * @param {string} token - the token value
+ * @returns {Object} the same payload, with the CSRF entry added
+ */
+function withCsrf(data, token) {
+    var field = document.getElementById('lengow-csrf-token');
+    var name = (field && field.getAttribute('data-csrf-name')) || 'csrf_token';
+    data[name] = token;
+    return data;
+}
+
+/**
  * Initializing Tab Events
  */
 function initializeTabEvents() {
@@ -83,11 +99,10 @@ function initializeTabEvents() {
             .ajax({
                 type: 'POST',
                 url: url,
-                data: {
+                data: withCsrf({
                     type: type,
-                    attributesJSON: JSON.stringify(finalJSON),
-                    csrf_token: csrfToken()
-                }
+                    attributesJSON: JSON.stringify(finalJSON)
+                }, csrfToken())
             })
             .done(function (response) {
                 jQuery('#dashboard-container').html(response);
@@ -113,10 +128,9 @@ function initializeTabEvents() {
             .ajax({
                 type: 'POST',
                 url: url,
-                data: {
-                    type: 'reset',
-                    csrf_token: csrfToken()
-                }
+                data: withCsrf({
+                    type: 'reset'
+                }, csrfToken())
             })
             .done(function (response) {
                 jQuery('#dashboard-container').html(response);

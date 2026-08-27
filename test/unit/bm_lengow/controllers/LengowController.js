@@ -93,6 +93,10 @@ function buildStubs(siteMock, overrides) {
             },
             'dw/web/CSRFProtection': ov.csrfProtection || {
                 generateToken: function () { return 'test-csrf-token'; },
+                // Deliberately not 'csrf_token': the clients must use the name the platform
+                // reports rather than a hard-coded one, and the tests should catch a regression
+                // to hard-coding.
+                getTokenName: function () { return 'test_csrf_name'; },
                 validateRequest: function () { return true; }
             },
             'dw/svc/LocalServiceRegistry': ov.serviceRegistry || {
@@ -1031,6 +1035,7 @@ describe('bm_lengow/cartridge/controllers: LengowController.js', function () {
     describe('CSRF protection', function () {
         var rejectingCsrf = {
             generateToken: function () { return 'test-csrf-token'; },
+            getTokenName: function () { return 'test_csrf_name'; },
             validateRequest: function () { return false; }
         };
 
@@ -1043,6 +1048,9 @@ describe('bm_lengow/cartridge/controllers: LengowController.js', function () {
 
             var data = b.isml.renderTemplate.firstCall.args[1];
             assert.equal(data.csrfToken, 'test-csrf-token');
+            // The name travels with the token: validateRequest() looks the parameter up by
+            // the name the platform reports, so the client must not hard-code 'csrf_token'.
+            assert.equal(data.csrfTokenName, 'test_csrf_name');
         });
 
         it('should refuse Submit and write nothing when the token is invalid', function () {

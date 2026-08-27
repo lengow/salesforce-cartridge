@@ -37,15 +37,19 @@ function initializeDropDownEvents() {
         if (!localeSelection) return;
         var url = localeSelection.dataset.url;
         var token = localeSelection.dataset.csrf || '';
+        // validateRequest() reads the parameter named by CSRFProtection.getTokenName().
+        // The controller renders that name so the key is never hard-coded here.
+        var tokenName = localeSelection.dataset.csrfName || 'csrf_token';
+        var payload = {
+            localeID: localeID,
+            checked: checked
+        };
+        payload[tokenName] = token;
 
         jQuery.ajax({
             type: 'POST',
             url: url,
-            data: {
-                localeID: localeID,
-                checked: checked,
-                csrf_token: token
-            }
+            data: payload
         })
         .done(function (response) {
             jQuery('.lengow-dropdown').html(response);
