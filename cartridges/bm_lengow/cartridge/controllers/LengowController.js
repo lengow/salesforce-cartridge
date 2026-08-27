@@ -7,7 +7,8 @@ var URLUtils = require('dw/web/URLUtils');
 var StringUtils = require('dw/util/StringUtils');
 var Resource = require('dw/web/Resource');
 var Transaction = require('dw/system/Transaction');
-var LocalServiceRegistry = require('dw/svc/LocalServiceRegistry');
+var CSRFProtection = require('dw/web/CSRFProtection');
+var collections = require('*/cartridge/scripts/helpers/collections');
 var valueTypeNameMapping = {
     string: 'String',
     text: 'Text',
@@ -51,98 +52,6 @@ function parseJSON(str) {
 }
 
 /**
- * @description Converts a Collection, Set, Java array or other iterable to a plain Array.
- * Compatible with Compatibility Mode 21.7 and 22.7+ (GraalJS).
- * IMPORTANT: In CM 22.7, Java Collection.toArray() returns a Java Object[] which does NOT
- * have JS Array methods (.filter, .indexOf, .push etc). We must ensure we always return
- * a proper JavaScript Array.
- * @param {(Set|Collection|Array|Object)} value The value to convert
- * @returns {Array} Plain JavaScript Array
- */
-function toArray(value) {
-    if (!value) {
-        return [];
-    }
-    if (Array.isArray(value)) {
-        return value;
-    }
-    // Try Java Iterator FIRST - works for all Java Collections in both CM 21.7 and 22.7
-    // and always produces a proper JS Array
-    try {
-        if (typeof value.iterator === 'function') {
-            var iter = value.iterator();
-            var items = [];
-            while (iter.hasNext()) {
-                items.push(iter.next());
-            }
-            return items;
-        }
-    } catch (e) {
-        // fallthrough
-    }
-    // Try Collection.toArray() + manual conversion to JS Array
-    // Must come before Array.from() — Array.from({toArray:fn}) returns [] without error,
-    // swallowing the result. In CM 22.7, toArray() returns Java Object[], so we manually
-    // copy into a JS Array to ensure .filter/.indexOf etc. are available.
-    try {
-        if (typeof value.toArray === 'function') {
-            var javaArr = value.toArray();
-            var arr = [];
-            for (var i = 0; i < javaArr.length; i++) {
-                arr.push(javaArr[i]);
-            }
-            return arr;
-        }
-    } catch (e) {
-        // fallthrough
-    }
-    // Try Array.from() - handles native JS Sets (CM 22.7+ getAllowedLocales) and Java arrays
-    try {
-        if (typeof Array.from === 'function') {
-            return Array.from(value);
-        }
-    } catch (e) {
-        // fallthrough
-    }
-    // Try forEach - handles JS Sets and some Java Collections
-    try {
-        if (typeof value.forEach === 'function') {
-            var forEachResult = [];
-            value.forEach(function (item) {
-                forEachResult.push(item);
-            });
-            return forEachResult;
-        }
-    } catch (e) {
-        // fallthrough
-    }
-    // Fallback: manual iteration for array-like objects with .length
-    try {
-        var len = value.length;
-        if (typeof len === 'number') {
-            var result = [];
-            for (var j = 0; j < len; j++) {
-                result.push(value[j]);
-            }
-            return result;
-        }
-    } catch (e) {
-        // fallthrough
-    }
-    return [];
-}
-
-/**
- * @description Converts allowed locales to an array, compatible with both Compatibility Mode 21.7 and 22.7+
- * In 21.7: getAllowedLocales() returns a Collection with toArray() method
- * In 22.7+: getAllowedLocales() returns a native JavaScript Set
- * @returns {Array} Array of locale strings
- */
-function getAllowedLocalesArray() {
-    return toArray(Site.getCurrent().getAllowedLocales());
-}
-
-/**
  * @description This function get the attribute ids present in the site preference passed
  * @param {string} attributeName Attribute Name
  * @returns {Array} array of attributes present in the site preference
@@ -160,128 +69,6 @@ function getAttributes(attributeName) {
         });
     }
     return attributeArray;
-}
-
-/**
- * @description Get a site preference value, trying the standard name first, then falling back to the prefixed name.
- * This handles the discrepancy between metadata naming conventions (e.g. 'ocapiClientId' vs 'lengowOcapiClientId').
- * @param {string} name The standard attribute name (without 'lengow' prefix)
- * @returns {string|null} The preference value
- */
-function getOcapiPreference(name) {
-    var value;
-    try {
-        value = currentSite.getCustomPreferenceValue(name);
-    } catch (e) {
-        value = null;
-    }
-    if (empty(value)) { // eslint-disable-line no-undef
-        // Fallback: try with 'lengow' prefix (capitalize first letter of name)
-        var prefixedName = 'lengow' + name.charAt(0).toUpperCase() + name.slice(1);
-        try {
-            value = currentSite.getCustomPreferenceValue(prefixedName);
-        } catch (e2) {
-            value = null;
-        }
-    }
-    return value;
-}
-
-/**
- * @description Get the OAuth token for Client Credentials Grant
- * @returns {(Object|string)} Auth Token or object based on service response
- */
-function getOCAPIOAuth2Token() {
-    var tokenResponse;
-    var ocapiClientId = getOcapiPreference('ocapiClientId');
-    var ocapiClientPassword = getOcapiPreference('ocapiClientPassword');
-    if (empty(ocapiClientId) || empty(ocapiClientPassword)) { // eslint-disable-line no-undef
-        return {
-            error: true,
-            message: Resource.msg('lengow.ocapi.params.missing', 'lengow', null)
-        };
-    }
-    var createRequest = function (ocapiService, _args) { // eslint-disable-line no-unused-vars
-        var base64Credentials = StringUtils.encodeBase64(ocapiClientId + ':' + ocapiClientPassword);
-        var url = StringUtils.format(ocapiService.URL, ocapiClientId);
-        ocapiService.URL = url;
-        ocapiService.addHeader('Content-Type', 'application/x-www-form-urlencoded');
-        ocapiService.addHeader('Authorization', 'Basic ' + base64Credentials);
-        ocapiService.setRequestMethod('POST');
-
-        return ocapiService;
-    };
-
-    var parseResponse = function (_service, args) {
-        return args.text;
-    };
-
-    var filterLogMessage = function (message) {
-        return message;
-    };
-
-    var serviceCallback = {
-        createRequest: createRequest,
-        parseResponse: parseResponse,
-        filterLogMessage: filterLogMessage
-    };
-
-    var service = LocalServiceRegistry.createService('LengowOAuthService', serviceCallback);
-    var response = service.call();
-    var responseObj = JSON.parse(response.object);
-    if (responseObj) {
-        tokenResponse = responseObj.access_token;
-    } else {
-        tokenResponse = {
-            error: true,
-            message: JSON.parse(response.errorMessage).error_description
-        };
-    }
-    return tokenResponse;
-}
-
-/**
- * @description This function get the system object definitions for the OCAPI service passed
- * @param {string} serviceName Service Name
- * @returns {(Object|Null)} returns the response of OCAPI service called
- */
-function callSystemObjectDefinitions(serviceName) {
-    var authToken = getOCAPIOAuth2Token();
-    var response;
-    var createRequest = function (ocapiService, _args) { // eslint-disable-line no-unused-vars
-        var host = currentSite.httpsHostName;
-        var url = StringUtils.format(ocapiService.URL, host, 'Product');
-        ocapiService.URL = url;
-        ocapiService.addHeader('Content-Type', 'application/json');
-        ocapiService.addHeader('Authorization', 'Bearer ' + authToken);
-        ocapiService.setRequestMethod('GET');
-        return ocapiService;
-    };
-
-    var parseResponse = function (_service, args) {
-        return args.text;
-    };
-
-    var filterLogMessage = function (message) {
-        return message;
-    };
-
-    var serviceCallback = {
-        createRequest: createRequest,
-        parseResponse: parseResponse,
-        filterLogMessage: filterLogMessage
-    };
-
-    if (authToken && !authToken.error) {
-        var service = LocalServiceRegistry.createService(serviceName, serviceCallback);
-        response = service.call();
-    } else {
-        response = {
-            error: true,
-            message: authToken.message
-        };
-    }
-    return response;
 }
 
 /**
@@ -316,7 +103,7 @@ function getProductSystemObjectDefinitions() {
 
         try {
             var typeDefinition = SystemObjectMgr.describe('Product');
-            var attributeDefs = toArray(typeDefinition.getAttributeDefinitions());
+            var attributeDefs = collections.toArray(typeDefinition.getAttributeDefinitions());
             var output = [];
             attributeDefs.forEach(function (attrDef) {
                 var attrId = attrDef.getID();
@@ -349,6 +136,17 @@ function getProductSystemObjectDefinitions() {
 }
 
 /**
+ * @description Renders a minimal error fragment when a POST fails CSRF validation.
+ * Both write endpoints are AJAX, so the response replaces a page region; a bare
+ * message is enough and avoids leaking any state to a forged request.
+ */
+function renderCsrfFailure() {
+    ISML.renderTemplate('lengow/csrffailure', {
+        errorMessage: Resource.msg('csrf.validation.failed', 'lengow', null)
+    });
+}
+
+/**
  * @description This Endpoint renders the main dasboard page where the merchant can choose mandatory and additional attributes
  */
 function manage() {
@@ -356,8 +154,8 @@ function manage() {
         var productSystemObjectDefinitions = getProductSystemObjectDefinitions();
         var lengowMandatoryAttributesArray = getAttributes('lengowMandatoryAttributes');
         var lengowAdditionalAttributesArray = getAttributes('lengowAdditionalAttributes');
-        var allowedLocales = getAllowedLocalesArray();
-        var selectedLocales = toArray(currentSite.getCustomPreferenceValue('lengowSeletedLocales'));
+        var allowedLocales = collections.toArray(currentSite.getAllowedLocales());
+        var selectedLocales = collections.toArray(currentSite.getCustomPreferenceValue('lengowSeletedLocales'));
         // Should Be Valid Locales
         selectedLocales = selectedLocales.filter(function (localeID) {
             return allowedLocales.indexOf(localeID) >= 0;
@@ -375,7 +173,9 @@ function manage() {
             allowedLocales: allowedLocales,
             selectedLocales: selectedLocales,
             impexUrl: impexUrl,
-            jobURL: jobURL
+            jobURL: jobURL,
+            csrfToken: CSRFProtection.generateToken(),
+            csrfTokenName: CSRFProtection.getTokenName()
         });
     } catch (e) {
         ISML.renderTemplate('lengow/lengowMainDashboard', {
@@ -387,7 +187,9 @@ function manage() {
             allowedLocales: [],
             selectedLocales: [],
             impexUrl: '',
-            jobURL: ''
+            jobURL: '',
+            csrfToken: CSRFProtection.generateToken(),
+            csrfTokenName: CSRFProtection.getTokenName()
         });
     }
 }
@@ -396,6 +198,10 @@ function manage() {
  * @description This Endpoint saves the selected attributes and renders the inner section of main dasboard page
  */
 function submit() {
+    if (!CSRFProtection.validateRequest()) {
+        renderCsrfFailure();
+        return;
+    }
     var params = request.httpParameterMap;// eslint-disable-line no-undef
     if (params.type.stringValue !== 'reset') {
         Transaction.wrap(function () {
@@ -410,8 +216,8 @@ function submit() {
     var productSystemObjectDefinitions = getProductSystemObjectDefinitions();
     var lengowMandatoryAttributesArray = getAttributes('lengowMandatoryAttributes');
     var lengowAdditionalAttributesArray = getAttributes('lengowAdditionalAttributes');
-    var allowedLocales = getAllowedLocalesArray();
-    var selectedLocales = toArray(currentSite.getCustomPreferenceValue('lengowSeletedLocales'));
+    var allowedLocales = collections.toArray(currentSite.getAllowedLocales());
+    var selectedLocales = collections.toArray(currentSite.getCustomPreferenceValue('lengowSeletedLocales'));
     // Should Be Valid Locales
     selectedLocales = selectedLocales.filter(function (localeID) {
         return allowedLocales.indexOf(localeID) >= 0;
@@ -429,7 +235,9 @@ function submit() {
         allowedLocales: allowedLocales,
         selectedLocales: selectedLocales,
         impexUrl: impexUrl,
-        jobURL: jobURL
+        jobURL: jobURL,
+        csrfToken: CSRFProtection.generateToken(),
+        csrfTokenName: CSRFProtection.getTokenName()
     });
 }
 
@@ -437,11 +245,15 @@ function submit() {
  * @description This Endpoint add or remove locale
  */
 function updateLocale() {
+    if (!CSRFProtection.validateRequest()) {
+        renderCsrfFailure();
+        return;
+    }
     var params = request.httpParameterMap; // eslint-disable-line no-undef
     var localeID = params.localeID.value;
     var checked = params.checked.value === 'true';
-    var allowedLocales = getAllowedLocalesArray();
-    var selectedLocales = toArray(currentSite.getCustomPreferenceValue('lengowSeletedLocales'));
+    var allowedLocales = collections.toArray(currentSite.getAllowedLocales());
+    var selectedLocales = collections.toArray(currentSite.getCustomPreferenceValue('lengowSeletedLocales'));
 
     selectedLocales = selectedLocales.filter(function (item) {
         return allowedLocales.indexOf(item) >= 0;
@@ -464,7 +276,9 @@ function updateLocale() {
     ISML.renderTemplate('lengow/tabs/localedropdown', {
         allowedLocales: allowedLocales,
         selectedLocales: selectedLocales,
-        isAjax: true
+        isAjax: true,
+        csrfToken: CSRFProtection.generateToken(),
+        csrfTokenName: CSRFProtection.getTokenName()
     });
 }
 
