@@ -1,5 +1,36 @@
 'use strict';
 
+// jQuery is bundled rather than pulled from a CDN: the Business Manager ships its own
+// jQuery, an external <script> can be blocked by BM CSP, and loading 1.12.4 over the top
+// used to clobber the BM's own $ (F1).
+var jQuery = require('jquery');
+var initDropdown = require('./modules/dropdown');
+
+/**
+ * Reads the CSRF token rendered by the controller.
+ * @returns {string} token, or empty string if the field is absent
+ */
+function csrfToken() {
+    var field = document.getElementById('lengow-csrf-token');
+    return field ? field.value : '';
+}
+
+/**
+ * Builds the CSRF entry of an AJAX payload under the parameter name the platform expects.
+ * CSRFProtection.validateRequest() looks up the parameter named by getTokenName(); hard-coding
+ * 'csrf_token' happens to match today but is not the API contract, so the name is rendered
+ * alongside the token and used as the key here.
+ * @param {Object} data - payload to extend
+ * @param {string} token - the token value
+ * @returns {Object} the same payload, with the CSRF entry added
+ */
+function withCsrf(data, token) {
+    var field = document.getElementById('lengow-csrf-token');
+    var name = (field && field.getAttribute('data-csrf-name')) || 'csrf_token';
+    data[name] = token;
+    return data;
+}
+
 /**
  * Initializing Tab Events
  */
@@ -68,10 +99,10 @@ function initializeTabEvents() {
             .ajax({
                 type: 'POST',
                 url: url,
-                data: {
+                data: withCsrf({
                     type: type,
                     attributesJSON: JSON.stringify(finalJSON)
-                }
+                }, csrfToken())
             })
             .done(function (response) {
                 jQuery('#dashboard-container').html(response);
@@ -97,9 +128,9 @@ function initializeTabEvents() {
             .ajax({
                 type: 'POST',
                 url: url,
-                data: {
+                data: withCsrf({
                     type: 'reset'
-                }
+                }, csrfToken())
             })
             .done(function (response) {
                 jQuery('#dashboard-container').html(response);
@@ -185,5 +216,6 @@ function initializeTabEvents() {
 // Initialize
 jQuery(document).ready(function () {
     initializeTabEvents();
+    initDropdown();
     jQuery('.tablinks.defaultOpen').click();
 });

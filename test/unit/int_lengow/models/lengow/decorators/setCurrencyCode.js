@@ -81,4 +81,88 @@ describe('cartridge/models/lengow/decorators: setCurrencyCode.js', function () {
             assert.isTrue(global.session.setCurrency.calledOnce);
         });
     });
+
+    describe('locale absent from countries.json', function () {
+        before(function () {
+            setCurrencyCode = proxyquire('int_lengow/cartridge/models/lengow/decorators/setCurrencyCode', {
+                'dw/system/Transaction': {
+                    wrap: function (callBack) { return callBack.call(); }
+                },
+                'dw/util/Locale': {
+                    getLocale: function (localeID) { return { ID: localeID }; }
+                },
+                'dw/util/Currency': {
+                    getCurrency: function (code) { return { code: code }; }
+                },
+                '*/cartridge/config/countries': countriesConfig
+            });
+        });
+
+        it('should warn and report failure instead of failing silently', function () {
+            var warnStub = sinon.stub();
+            var object = { logger: { warn: warnStub } };
+            setCurrencyCode(object);
+
+            var result = object.setCurrencyCode('ja_JP');
+
+            assert.isFalse(result, 'should report that the currency was not applied');
+            assert.isTrue(global.session.setCurrency.notCalled, 'should not touch the session currency');
+            assert.isTrue(warnStub.calledOnce, 'should log a warning');
+            assert.include(warnStub.firstCall.args[0], 'countries.json');
+        });
+    });
+
+    describe('currency not allowed on the site', function () {
+        before(function () {
+            setCurrencyCode = proxyquire('int_lengow/cartridge/models/lengow/decorators/setCurrencyCode', {
+                'dw/system/Transaction': {
+                    wrap: function (callBack) { return callBack.call(); }
+                },
+                'dw/util/Locale': {
+                    getLocale: function (localeID) { return { ID: localeID }; }
+                },
+                'dw/util/Currency': {
+                    getCurrency: function () {
+                        throw new Error('Currency EUR is not allowed for this site');
+                    }
+                },
+                '*/cartridge/config/countries': countriesConfig
+            });
+        });
+
+        it('should warn and report failure rather than swallowing the exception', function () {
+            var warnStub = sinon.stub();
+            var object = { logger: { warn: warnStub } };
+            setCurrencyCode(object);
+
+            var result = object.setCurrencyCode('fr_FR');
+
+            assert.isFalse(result, 'should report that the currency was not applied');
+            assert.isTrue(warnStub.calledOnce, 'should log a warning');
+            assert.include(warnStub.firstCall.args[0], 'Allowed Currencies');
+        });
+    });
+
+    describe('without a logger on the object', function () {
+        before(function () {
+            setCurrencyCode = proxyquire('int_lengow/cartridge/models/lengow/decorators/setCurrencyCode', {
+                'dw/system/Transaction': {
+                    wrap: function (callBack) { return callBack.call(); }
+                },
+                'dw/util/Locale': {
+                    getLocale: function (localeID) { return { ID: localeID }; }
+                },
+                'dw/util/Currency': {
+                    getCurrency: function (code) { return { code: code }; }
+                },
+                '*/cartridge/config/countries': countriesConfig
+            });
+        });
+
+        it('should not blow up when there is nothing to log to', function () {
+            var object = {};
+            setCurrencyCode(object);
+            assert.doesNotThrow(function () { object.setCurrencyCode('ja_JP'); });
+        });
+    });
 });

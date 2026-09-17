@@ -23,7 +23,12 @@ function getAttributeValue(attribute) {
             } else if (attribute instanceof EnumValue || attribute instanceof Quantity) {
                 result = attribute.value;
             } else if (attribute instanceof Date) {
-                result = StringUtils.formatCalendar(new Calendar(attribute), 'dd/MM/yyyy HH:MM:SS');
+                // 'HH:mm:ss', not 'HH:MM:SS'. These are SimpleDateFormat patterns, where
+                // MM is the month and SS is milliseconds, so the previous pattern rendered
+                // the month in place of the minutes and milliseconds in place of the seconds.
+                // It produced things like "25/08/2026 14:08:07" — plausible enough that
+                // nobody would question it, which is what made it worth fixing.
+                result = StringUtils.formatCalendar(new Calendar(attribute), 'dd/MM/yyyy HH:mm:ss');
             }
         } else {
             return attribute;

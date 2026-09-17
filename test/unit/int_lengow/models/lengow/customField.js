@@ -256,4 +256,31 @@ describe('cartridge/models/lengow: customField.js', function () {
         var attValue = customField(productWithCustomArray, attrObject);
         assert.equal(attValue, 'red, green');
     });
+    describe('date formatting pattern', function () {
+        it('should ask for minutes and seconds, not month and milliseconds', function () {
+            var captured = null;
+            var mod = proxyquire('int_lengow/cartridge/models/lengow/customField', {
+                'dw/content/MarkupText': MarkupText,
+                'dw/util/StringUtils': {
+                    formatCalendar: function (cal, pattern) {
+                        captured = pattern;
+                        return 'formatted';
+                    }
+                },
+                'dw/util/Calendar': function () { return {}; },
+                'dw/value/EnumValue': EnumValue,
+                'dw/content/MediaFile': MediaFile,
+                'dw/value/Quantity': Quantity
+            });
+
+            mod({ creationDate: new Date('2026-03-11T14:30:12Z'), custom: {} }, { id: 'creationDate' });
+
+            // These are SimpleDateFormat patterns: MM is the month, SS is milliseconds.
+            // 'dd/MM/yyyy HH:MM:SS' therefore rendered the month where the minutes belong
+            // and milliseconds where the seconds belong, producing a plausible-looking but
+            // wrong timestamp. The stub in the suite above returns a fixed string, so it
+            // never noticed - this test checks the pattern itself.
+            assert.equal(captured, 'dd/MM/yyyy HH:mm:ss');
+        });
+    });
 });

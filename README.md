@@ -4,7 +4,11 @@
 
 * **Description:** Lengow is a central platform at the heart of your e-commerce strategy. Select and import your product data from SFCC to Lengow and optimize it for hundreds of different marketing channels.
 * **Version:** 22.1.0 <!-- x-release-please-version -->
-* **Compatibility:** Compatible with SFRA 6.0.0 and 7.0.0, Compatibility Mode 21.7 and 22.7+. This cartridge is standalone and does not depend on SFRA at runtime. `bm_lengow` runs inside the Business Manager, `int_lengow` executes server-side jobs.
+* **Compatibility:**
+  * **Independent of SFRA.** The cartridge has no SFRA runtime dependency — no `module.superModule`, no `require('server')`, no reference to `app_storefront_base`. It works the same on SFRA 5, 6, 7 and 8, and an SFRA major upgrade cannot break it. `bm_lengow` runs inside the Business Manager, `int_lengow` executes server-side jobs.
+  * **Compatibility modes 15.5 through 22.7 are supported.** 22.7 — the most recent mode Salesforce offers — was verified end to end on 25 August 2026. Earlier modes rest on a per-mode analysis of every behavioural change Salesforce documents, checked against the APIs this cartridge actually calls, together with field evidence from live installations.
+  * **Below 15.5 is not supported.** 15.5 is where Salesforce changed how modules behave: `require()` gained proper isolation, module-level globals stopped leaking across scopes, and JSON parsing became strict. This cartridge is written against those semantics. Earlier modes are untested and long past end of life.
+  * Lab-testing each older mode is not possible: the compatibility mode is instance-wide and only moves forward, so an instance already on 22.7 cannot be moved back down.
 
 ----
 
@@ -30,6 +34,54 @@
 > export NODE_OPTIONS=--openssl-legacy-provider
 > npm run build
 > ```
+
+----
+
+## Before you start
+
+### You must provide an SFTP server
+
+**B2C Commerce does not host one.** A B2C Commerce instance exposes WebDAV over HTTPS and nothing else — there is no SSH and no SFTP on the platform. The cartridge is an SFTP *client*: it pushes the generated files out to a server you supply.
+
+That server is the drop box in the middle of the flow:
+
+```
+SFCC (LengowUploadFeed)  ──push──▶  your SFTP  ◀──pull──  Lengow platform
+        Step 4                                              Step 7
+```
+
+The same host, user and password go in both places. Plain FTP is not supported — SFTP only.
+
+### Compatibility
+
+| | |
+|---|---|
+| **Compatibility modes** | **15.5 → 22.7 supported.** 22.7 verified end to end |
+| Platform release | any — every `dw.*` API used here is old and stable |
+| SFRA | irrelevant; no SFRA runtime dependency (tested alongside SFRA 8.0.0) |
+| Node (build only) | 20, with `NODE_OPTIONS=--openssl-legacy-provider` |
+
+The server code is strict ES5. Support for modes below 22.7 rests on a per-mode analysis — every behavioural change Salesforce documents for each mode, checked against the APIs this cartridge calls — plus field evidence from live installations.
+
+**Below 15.5 is not supported**: 15.5 is where Salesforce changed module behaviour — `require()` isolation, module-level globals no longer leaking across scopes, strict JSON parsing — and this cartridge is written against those semantics.
+
+Lab-testing each older mode is not possible — the mode is instance-wide and only moves forward, so an instance already on 22.7 cannot be moved back down.
+
+### The whole install in one glance
+
+| Step | Where | Skipping it gives you |
+|---|---|---|
+| 1. Upload cartridges | WebDAV | nothing works |
+| 2. Import metadata | BM | the config page errors |
+| 3. Cartridge paths | BM | no Lengow menu |
+| **3b. Grant the module to your role** | BM | **no Lengow menu, even with step 3 done** |
+| **3c. Re-activate the code version** | BM | **"the job is invalid", unknown step type** |
+| 4. SFTP service | BM | uploads fail |
+| 5. Export job | BM | nothing is generated |
+| 6. Attributes and locales | BM | empty or incomplete CSVs |
+| 7. Lengow catalog | Lengow | files are produced but never collected |
+
+Steps **3b** and **3c** are the two that most often stall an installation, and neither is discoverable from the error messages.
 
 ----
 
@@ -91,7 +143,34 @@ int_lengow:[existing cartridges]
 
 > Repeat for **every site** that needs to export a catalog to Lengow.
 
-After saving, the **Lengow** menu should appear under **Merchant Tools** when you select the correct site.
+> `bm_lengow` requires `int_lengow` to be in the **Business Manager** cartridge path as well — the controller resolves the shared `*/cartridge/scripts/helpers/collections` module from it.
+
+### Step 3b — Grant the Lengow module to your Business Manager role
+
+**The menu will NOT appear after Step 3 alone.** Adding the cartridge only makes the module *available*; a role still has to be granted access to it.
+
+1. **Administration > Organization > Roles & Permissions**
+2. Click your role (typically `Administrator`)
+3. Open the **Business Manager Modules** tab
+4. Click **Select Context**, tick the site(s) that will export to Lengow, click **Apply**
+5. Tick the **Write** checkbox on both **Lengow** and **Export Attributes Configurations**
+6. Click **Update** at the bottom of the page
+
+The **Lengow** menu now appears under **Merchant Tools** when the matching site is selected.
+
+### Step 3c — Re-activate your code version
+
+If you uploaded the cartridges into a code version that was **already active**, the custom job step types are not registered yet. The job you import in Step 5 will show *"The job is invalid"* with:
+
+```
+Invalid step [Lengow Generate Feed]! Type with id [custom.LengowCatalogFeed] is unknown!
+```
+
+`steptypes.json` is scanned only when a code version is activated. Fix:
+
+**Administration > Site Development > Code Deployment** — activate any other code version, then activate yours again.
+
+> Deploying into a *new* code version and activating it once avoids this entirely.
 
 ### Step 4 — Configure the SFTP service
 
@@ -101,13 +180,15 @@ If you imported `services.xml`, the services are already created. You only need 
 
 Edit `lengow.sftp.credentials`:
 
-| Field | Value |
-|---|---|
-| URL | `sftp://your-sftp-server-host` |
-| User | your SFTP username |
-| Password | your SFTP password |
+| Field | Value | Notes |
+|---|---|---|
+| URL | `sftp://your-sftp-host` | the `sftp://` scheme is required; add `:port` if it is not 22 |
+| User | your SFTP username | |
+| Password | your SFTP password | write-only in the UI — you can set it but not read it back |
 
 Verify that the `lengow.sftp` service (Services tab) is enabled with type SFTP.
+
+> Note the password field cannot be read back once saved. Keep the credentials wherever they were issued — you will need the same ones again in Step 7.
 
 <details>
 <summary>Manual creation (if services.xml was not imported)</summary>
@@ -137,7 +218,7 @@ In the **Job Steps** tab, configure two steps in order:
 |---|---|---|
 | ImpexFolderName | `src/lengow` | IMPEX folder where the CSV is generated |
 | FileNamePrefix | `lengow` | File name prefix |
-| IncludeTimeStamp | `false` | Append a timestamp to the file name |
+| IncludeTimeStamp | `false` | **Leave this at `false`** — see below |
 | CatalogID | _(empty)_ | Catalog ID to export. If empty, exports all site products |
 | SkipMaster | `true` | Exclude master products |
 | AvailableOnly | `false` | Export only in-stock products |
@@ -146,7 +227,13 @@ In the **Job Steps** tab, configure two steps in order:
 
 **Scope**: select the relevant site(s).
 
-> One CSV file is generated **per selected locale** (see Step 6).
+One CSV file is generated **per selected locale** (see Step 6), named:
+
+```
+<FileNamePrefix>_<siteID>_<localeID>.csv        e.g.  lengow_RefArchGlobal_fr_FR.csv
+```
+
+> ⚠️ **`IncludeTimeStamp` must stay `false`.** Setting it to `true` inserts a timestamp into the file name — `lengow_RefArchGlobal_20260825_143012_7_fr_FR.csv` — which therefore **changes on every run**. Lengow imports a fixed file name, so it would stop finding the file after the first execution.
 
 #### Step 2: `custom.LengowUploadFeed`
 
@@ -155,11 +242,15 @@ In the **Job Steps** tab, configure two steps in order:
 | Parameter | Default | Description |
 |---|---|---|
 | ServiceID | `lengow.sftp` | SFTP service ID configured in Step 4 |
-| SftpFolderName | _(required)_ | Destination folder on the SFTP server |
+| SftpFolderName | _(required)_ | Destination folder on the SFTP server, e.g. `/lengow` |
 | ImpexFolderName | `src/lengow` | IMPEX source folder (must match step 1) |
 | IsDisabled | `false` | Disable this step |
 
-**Scope**: select **Organization** (not a specific site).
+**Scope**: select **Organization** (not a specific site). This is correct and verified — the step runs fine in organization context.
+
+What this step does, in order: connect, `cd` into `SftpFolderName` (creating it if absent), transfer each CSV, ZIP the transferred files into `<ImpexFolderName>/archive/`, then delete them from IMPEX.
+
+If **any** transfer fails, the step ends in `ERROR`. Archiving still happens first, so a partial failure is handled cleanly: the CSVs that **did** transfer are zipped into `archive/` and removed from IMPEX, and only the ones that **failed** are left behind for the next run. Do not expect every file to still be sitting in IMPEX after an `ERROR` — what remains there is exactly the list of files that did not make it.
 
 In the **Schedule and History** tab, set a recurrence (recommended: every 6 to 12 hours). You can test manually with **Run Now**.
 
@@ -178,7 +269,40 @@ In the **Schedule and History** tab, set a recurrence (recommended: every 6 to 1
 1. Log in to your Lengow account
 2. Go to **Catalogs > Add a new catalog**
 3. Select the import method **Salesforce Commerce Cloud**
-4. Enter your SFTP connection details: Host, Port, Path, File name, Username, Password
+4. Enter the connection details of the **same SFTP** you configured in Step 4:
+
+| Field | Value | Notes |
+|---|---|---|
+| Host | `sftp://your-sftp-host` | ⚠️ **include the `sftp://` scheme** — without it the import fails with `URL schema "" is not allowed` |
+| Port | `22` | or your custom port |
+| Path | the same folder as `SftpFolderName` | e.g. `/lengow` |
+| File name | `lengow_<siteID>_<localeID>.csv` | e.g. `lengow_RefArchGlobal_fr_FR.csv` |
+| Username / Password | same as Step 4 | |
+
+> **One Lengow catalog per locale.** The export produces one file per selected locale, and a Lengow catalog imports one file. Four locales means four catalogs, each pointing at its own file name.
+
+5. Schedule the Lengow import to run **after** the SFCC export job, so it always collects fresh data.
+
+> The file name and its location must not change between runs — this is why `IncludeTimeStamp` stays `false` (Step 5).
+
+----
+
+## Verify the installation
+
+Run `LengowFeed` once with **Run Now**, then check these six things in order. Each one tells you which step to go back to.
+
+| # | Check | Where | If it fails |
+|---|---|---|---|
+| 1 | The **Lengow** menu is visible | Merchant Tools | Steps 3 and 3b |
+| 2 | The attribute list loads, the locale dropdown opens and lists your allowed locales | Merchant Tools ▸ Lengow | Step 2 |
+| 3 | One CSV per selected locale appears in `IMPEX/src/lengow/` | WebDAV or **Go to IMPEX** | Step 5, step 1 of the job |
+| 4 | The files arrive on the SFTP | your SFTP server | Step 4, and `SftpFolderName` in Step 5 |
+| 5 | `IMPEX/src/lengow/` is now empty and `archive/` holds one `.zip` per file | WebDAV | the transfer failed — see the log below |
+| 6 | The job ends **OK** | Administration ▸ Operations ▸ Jobs | see the log below |
+
+**The custom log is the place to look:** `Logs/custom-LENGOW-*.log` over WebDAV, or Administration ▸ Site Development ▸ Development Setup ▸ Log Files. It names every file that transferred and every file that did not.
+
+A job in `ERROR` with `SFTP upload failed for N of M file(s)` means the generation worked and the transfer did not — check Step 4 and `SftpFolderName`, not the export configuration.
 
 ----
 
@@ -203,8 +327,21 @@ npm run lint       # Lint all JavaScript and SCSS files
 
 ### The Lengow menu does not appear in the BM
 
-- Verify that `bm_lengow` is in the **Business Manager** site cartridge path
-- Verify that you have selected the correct site in the site selector
+In order of likelihood:
+
+1. **The module is not granted to your role** — this is by far the most common cause, and the cartridge path being correct is not enough. See **Step 3b**.
+2. `bm_lengow` is not in the **Business Manager** site cartridge path (Step 3)
+3. The wrong site is selected in the site selector
+
+### The job is marked "invalid" — `custom.LengowCatalogFeed` is unknown
+
+The step types were not registered because the cartridges landed in an already-active code version. See **Step 3c**.
+
+### The job finishes green but Lengow receives nothing
+
+This was a real bug up to and including v22.1.0: every SFTP transfer could fail and the job still reported `OK`. It is fixed — the step now returns `ERROR` when any file fails to upload.
+
+If you are on an older version, check the custom `LENGOW` log for `Failed Upload CSV Files` even when the job looks successful.
 
 ### "Module not found" error when running the job
 
@@ -225,13 +362,35 @@ Module "*/cartridge/models/lengow/decorators/index" not found
 - Verify that the site has **Allowed Locales** configured: **Administration > Sites > Manage Sites > [site] > Allowed Locales**
 - Make sure the cartridge version on `main` is up to date (fix PCMT-1347)
 
-### The CSV contains incorrect currencies
+### The CSV contains an unexpected currency
 
-The locale-to-currency mapping is defined in `int_lengow/cartridge/config/countries.json`. The file ships with 50 pre-configured locales. If your site uses a locale not in the list, add it:
+The file itself is always consistent — `currencyCode` and `sale_price` always match. What can surprise you is *which* currency a given locale's file ends up with.
 
-```json
-{ "id": "xx_XX", "currencyCode": "XXX" }
-```
+When the currency for a locale cannot be applied, the session keeps the **previous locale's** currency, so the file for locale X ships with currency Y, correctly labelled. The cartridge now logs a warning in the custom `LENGOW` log in both cases:
+
+1. **The locale is not in `countries.json`** — the file ships with 50 locales. Add yours:
+   ```json
+   { "id": "xx_XX", "currencyCode": "XXX" }
+   ```
+2. **The currency is not allowed on the site** — add it under **Administration > Sites > Manage Sites > [site] > Allowed Currencies**.
+
+### The transfer fails, or the files land in the wrong place on the SFTP
+
+Check `SftpFolderName` (Step 5). It is the folder on the remote server, for example `/lengow`.
+
+> Up to and including v22.1.0 this value had to end with a slash, otherwise the destination path was built without a separator and the file was written to the server root under a mangled name — silently succeeding on permissive servers. This is fixed; a trailing slash is no longer needed and is harmless if present.
+
+### Lengow reports `URL schema "" is not allowed`
+
+The Host field in the Lengow catalog is missing its scheme. Use `sftp://your-host`, not `your-host`. See Step 7.
+
+### Lengow reports it cannot retrieve the file
+
+The connection worked but the file was not found. In order of likelihood:
+
+1. The SFCC job has not run yet, or its upload step failed — check the job status and the custom log
+2. The **Path** or **File name** in Lengow does not match what the job produces — compare against `IMPEX/src/lengow/` before the upload, or your SFTP folder after
+3. `IncludeTimeStamp` was set to `true`, so the file name changed (Step 5)
 
 ### OpenSSL error during build
 

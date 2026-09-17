@@ -10,7 +10,7 @@
     <span></span>
 </div>
 
-<ul class="locale-selection-items ${pdict.isAjax ? 'visible' : ''}" data-url="${dw.web.URLUtils.url('LengowController-UpdateLocale')}">
+<ul class="locale-selection-items ${pdict.isAjax ? 'visible' : ''}" data-url="${dw.web.URLUtils.url('LengowController-UpdateLocale')}" data-csrf="${pdict.csrfToken}" data-csrf-name="${pdict.csrfTokenName}">
     <isloop items="${pdict.allowedLocales}" var="locale" status="loopstatus">
         <isset name="sfccLocale" value="${require('dw/util/Locale').getLocale(locale)}" scope="page" />
         <isif condition="${locale !== 'default'}">

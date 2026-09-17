@@ -7,6 +7,12 @@
     "max-len": "off",
     "quote-props": "off",
     "no-new": "off",
-    "valid-jsdoc": "off"
+    "valid-jsdoc": "off",
+
+    "new-cap": "off",
+    "no-underscore-dangle": "off",
+    "one-var": "off",
+    "one-var-declaration-per-line": "off",
+    "no-unused-vars": ["error", { "args": "none" }]
   }
 }

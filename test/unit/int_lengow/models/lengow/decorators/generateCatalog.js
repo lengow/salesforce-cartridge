@@ -2,6 +2,8 @@
 
 require('app-module-path').addPath(process.cwd());
 require('app-module-path').addPath(process.cwd() + '/cartridges');
+
+var realCollections = require('int_lengow/cartridge/scripts/helpers/collections');
 var proxyquire = require('proxyquire').noCallThru().noPreserveCache();
 var sinon = require('sinon');
 var assert = require('chai').assert;
@@ -12,6 +14,7 @@ describe('cartridge/models/lengow/decorators: generateCatalog.js', function () {
     describe('Compatibility Mode 21.7 (Collection with toArray)', function () {
         before(function () {
             generateCatalog = proxyquire('int_lengow/cartridge/models/lengow/decorators/generateCatalog', {
+                '*/cartridge/scripts/helpers/collections': realCollections,
                 'dw/system/Site': {
                     getCurrent: function () {
                         return {
@@ -75,6 +78,7 @@ describe('cartridge/models/lengow/decorators: generateCatalog.js', function () {
     describe('Compatibility Mode 22.7+ (Native Set)', function () {
         before(function () {
             generateCatalog = proxyquire('int_lengow/cartridge/models/lengow/decorators/generateCatalog', {
+                '*/cartridge/scripts/helpers/collections': realCollections,
                 'dw/system/Site': {
                     getCurrent: function () {
                         return {
@@ -151,6 +155,7 @@ describe('cartridge/models/lengow/decorators: generateCatalog.js', function () {
 
         before(function () {
             generateCatalog = proxyquire('int_lengow/cartridge/models/lengow/decorators/generateCatalog', {
+                '*/cartridge/scripts/helpers/collections': realCollections,
                 'dw/system/Site': {
                     getCurrent: function () {
                         return {
@@ -212,6 +217,7 @@ describe('cartridge/models/lengow/decorators: generateCatalog.js', function () {
     describe('Edge case: null/empty locales', function () {
         before(function () {
             generateCatalog = proxyquire('int_lengow/cartridge/models/lengow/decorators/generateCatalog', {
+                '*/cartridge/scripts/helpers/collections': realCollections,
                 'dw/system/Site': {
                     getCurrent: function () {
                         return {

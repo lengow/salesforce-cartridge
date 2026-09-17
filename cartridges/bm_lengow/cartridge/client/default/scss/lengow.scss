@@ -191,3 +191,14 @@ input[type="checkbox"] {
         text-decoration: underline;
     }
 }
+
+// The only two Bootstrap utility classes this module ever used. Inlining them here
+// is what allows the Bootstrap CDN <link> to be dropped from header.isml — see F1
+// in documentation/DISCOVERY.md (Business Manager CSP + jQuery clobbering risk).
+.d-none {
+    display: none !important;
+}
+
+.mt-4 {
+    margin-top: 1.5rem;
+}

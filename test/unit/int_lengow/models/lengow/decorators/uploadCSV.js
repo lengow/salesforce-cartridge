@@ -89,7 +89,6 @@ function createSFTPService(options) {
 }
 
 describe('cartridge/models/lengow/decorators: uploadCSV.js', function () {
-
     describe('folder not found (not a directory)', function () {
         before(function () {
             var FileStub = createFileConstructor({ isDirectory: false });
@@ -210,19 +209,91 @@ describe('cartridge/models/lengow/decorators: uploadCSV.js', function () {
             });
         });
 
-        it('should log failed uploads', function () {
+        it('should log failed uploads AND throw so the job reports ERROR', function () {
             var errorStub = sinon.stub();
             var object = {
                 config: { impexFolderName: 'src/lengow', archiveFolderName: 'archive' },
                 sftpConfig: { sftpFolderName: '/upload', serviceID: 'LengowSFTP' },
                 logger: { error: errorStub, info: sinon.stub() }
             };
-            uploadCSV(object);
-            object.uploadCSV();
+            // uploadCSV() is invoked by the decorator itself, so the throw surfaces here
+            assert.throws(function () { uploadCSV(object); }, /SFTP upload failed for 1 of 1/);
+
             var hasFailMsg = errorStub.getCalls().some(function (call) {
                 return typeof call.args[0] === 'string' && call.args[0].indexOf('Failed Upload') > -1;
             });
             assert.isTrue(hasFailMsg, 'Should log failed upload');
+        });
+    });
+
+    describe('partial upload failure', function () {
+        var csvOk;
+        var csvKo;
+
+        before(function () {
+            csvOk = {
+                name: 'catalog_en.csv',
+                fullPath: '/impex/src/lengow/catalog_en.csv',
+                getFullPath: function () { return this.fullPath; },
+                zip: sinon.stub(),
+                remove: sinon.stub()
+            };
+            csvKo = {
+                name: 'catalog_fr.csv',
+                fullPath: '/impex/src/lengow/catalog_fr.csv',
+                getFullPath: function () { return this.fullPath; },
+                zip: sinon.stub(),
+                remove: sinon.stub()
+            };
+            var FileStub = createFileConstructor({ csvFiles: [csvOk, csvKo] });
+            uploadCSV = proxyquire('int_lengow/cartridge/models/lengow/decorators/uploadCSV', {
+                'dw/io/File': FileStub,
+                '~/cartridge/scripts/init/lengowSFTPService': {
+                    getService: function () {
+                        return {
+                            // Only the French file fails, so the batch is genuinely partial.
+                            call: function (method, path) {
+                                if (method === 'putBinary') {
+                                    var failing = String(path).indexOf('catalog_fr.csv') > -1;
+                                    return {
+                                        getObject: function () { return !failing; },
+                                        isOk: function () { return !failing; },
+                                        getErrorMessage: function () { return 'Permission denied'; }
+                                    };
+                                }
+                                return { ok: true };
+                            },
+                            getURL: function () { return 'sftp://lengow.io'; }
+                        };
+                    }
+                }
+            });
+        });
+
+        it('should archive what uploaded, keep what failed, and still throw', function () {
+            var errorStub = sinon.stub();
+            var object = {
+                config: { impexFolderName: 'src/lengow', archiveFolderName: 'archive' },
+                sftpConfig: { sftpFolderName: '/upload', serviceID: 'LengowSFTP' },
+                logger: { error: errorStub, info: sinon.stub() }
+            };
+
+            // The contract: archiving runs *before* the throw, so a partial batch loses no work.
+            assert.throws(function () { uploadCSV(object); }, /SFTP upload failed for 1 of 2/);
+
+            assert.isTrue(csvOk.zip.called, 'the transferred file should be zipped into archive/');
+            assert.isTrue(csvOk.remove.called, 'the transferred file should be removed from IMPEX');
+            assert.isFalse(csvKo.zip.called, 'the failed file must not be archived');
+            assert.isFalse(csvKo.remove.called, 'the failed file must stay in IMPEX for the next run');
+
+            // The reason has to reach the log, otherwise auth, network, permission and
+            // bad-path failures are indistinguishable to whoever reads it.
+            var failLog = errorStub.getCalls().filter(function (call) {
+                return typeof call.args[0] === 'string' && call.args[0].indexOf('Failed Upload') > -1;
+            });
+            assert.lengthOf(failLog, 1, 'Should log the failed upload');
+            assert.include(failLog[0].args[1], 'Permission denied', 'the failure reason should be logged');
+            assert.include(failLog[0].args[1], 'catalog_fr.csv', 'the failing file should be named');
         });
     });
 
@@ -303,16 +374,17 @@ describe('cartridge/models/lengow/decorators: uploadCSV.js', function () {
             });
         });
 
-        it('should not throw (mkdir returns false, but cd path is not re-attempted if mkdir fails)', function () {
+        it('should fail immediately with the folder error when mkdir fails', function () {
             var object = {
                 config: { impexFolderName: 'src/lengow', archiveFolderName: 'archive' },
                 sftpConfig: { sftpFolderName: '/upload', serviceID: 'LengowSFTP' },
                 logger: { error: sinon.stub(), info: sinon.stub() }
             };
-            uploadCSV(object);
-            // mkdir returns false so the inner if(!sftpService.call('mkdir', sftpPath).ok) is false
-            // meaning we don't enter the inner if block, so no throw
-            assert.doesNotThrow(function () { object.uploadCSV(); });
+            // The destination folder does not exist and cannot be created, so there is nowhere
+            // to upload to. The step must say that, not fall through and report a generic
+            // transfer failure — which is what it used to do, because a failed mkdir
+            // short-circuited the compound condition and raised nothing at all.
+            assert.throws(function () { uploadCSV(object); }, /Cannot create SFTP folder \/upload/);
         });
     });
 
@@ -408,6 +480,95 @@ describe('cartridge/models/lengow/decorators: uploadCSV.js', function () {
                 return typeof call.args[0] === 'string' && call.args[0].indexOf('Cannot create zip archive') > -1;
             });
             assert.isTrue(hasCreateFailMsg, 'Should log cannot create zip archive');
+        });
+    });
+    describe('remote path construction (F15)', function () {
+        it('should join the SFTP folder and the file name with exactly one slash', function () {
+            var putPaths = [];
+            var csvFile1 = {
+                name: 'catalog_en.csv',
+                fullPath: '/impex/src/lengow/catalog_en.csv',
+                getFullPath: function () { return this.fullPath; },
+                zip: sinon.stub(),
+                remove: sinon.stub()
+            };
+            var FileStub = createFileConstructor({ csvFiles: [csvFile1], fileExists: false });
+            var capturingService = {
+                getService: function () {
+                    return {
+                        call: function (method, path) {
+                            if (method === 'putBinary') {
+                                putPaths.push(path);
+                                return {
+                                    getObject: function () { return true; },
+                                    isOk: function () { return true; },
+                                    getErrorMessage: function () { return ''; }
+                                };
+                            }
+                            return { ok: true };
+                        },
+                        getURL: function () { return 'sftp://lengow.io'; }
+                    };
+                }
+            };
+            var mod = proxyquire('int_lengow/cartridge/models/lengow/decorators/uploadCSV', {
+                'dw/io/File': FileStub,
+                '~/cartridge/scripts/init/lengowSFTPService': capturingService
+            });
+
+            var object = {
+                config: { impexFolderName: 'src/lengow', archiveFolderName: 'archive' },
+                // no trailing slash - this is what the README and the metadata default look like
+                sftpConfig: { sftpFolderName: '/upload', serviceID: 'LengowSFTP' },
+                logger: { error: sinon.stub(), info: sinon.stub() }
+            };
+            mod(object);
+
+            assert.deepEqual(putPaths, ['/upload/catalog_en.csv'],
+                'must not produce /uploadcatalog_en.csv');
+        });
+
+        it('should not double the slash when the folder already ends with one', function () {
+            var putPaths = [];
+            var csvFile1 = {
+                name: 'catalog_en.csv',
+                fullPath: '/impex/src/lengow/catalog_en.csv',
+                getFullPath: function () { return this.fullPath; },
+                zip: sinon.stub(),
+                remove: sinon.stub()
+            };
+            var FileStub = createFileConstructor({ csvFiles: [csvFile1], fileExists: false });
+            var capturingService = {
+                getService: function () {
+                    return {
+                        call: function (method, path) {
+                            if (method === 'putBinary') {
+                                putPaths.push(path);
+                                return {
+                                    getObject: function () { return true; },
+                                    isOk: function () { return true; },
+                                    getErrorMessage: function () { return ''; }
+                                };
+                            }
+                            return { ok: true };
+                        },
+                        getURL: function () { return 'sftp://lengow.io'; }
+                    };
+                }
+            };
+            var mod = proxyquire('int_lengow/cartridge/models/lengow/decorators/uploadCSV', {
+                'dw/io/File': FileStub,
+                '~/cartridge/scripts/init/lengowSFTPService': capturingService
+            });
+
+            var object = {
+                config: { impexFolderName: 'src/lengow', archiveFolderName: 'archive' },
+                sftpConfig: { sftpFolderName: '/upload/', serviceID: 'LengowSFTP' },
+                logger: { error: sinon.stub(), info: sinon.stub() }
+            };
+            mod(object);
+
+            assert.deepEqual(putPaths, ['/upload/catalog_en.csv']);
         });
     });
 });
