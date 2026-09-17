@@ -3,7 +3,7 @@
 ## LINK Cartridge Developer Guide
 
 * **Description:** Lengow is a central platform at the heart of your e-commerce strategy. Select and import your product data from SFCC to Lengow and optimize it for hundreds of different marketing channels.
-* **Version:** 22.1.0 <!-- x-release-please-version -->
+* **Version:** 22.2.0 <!-- x-release-please-version -->
 * **Compatibility:**
   * **Independent of SFRA.** The cartridge has no SFRA runtime dependency — no `module.superModule`, no `require('server')`, no reference to `app_storefront_base`. It works the same on SFRA 5, 6, 7 and 8, and an SFRA major upgrade cannot break it. `bm_lengow` runs inside the Business Manager, `int_lengow` executes server-side jobs.
   * **Compatibility modes 15.5 through 22.7 are supported.** 22.7 — the most recent mode Salesforce offers — was verified end to end on 25 August 2026. Earlier modes rest on a per-mode analysis of every behavioural change Salesforce documents, checked against the APIs this cartridge actually calls, together with field evidence from live installations.
